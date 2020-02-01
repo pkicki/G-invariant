@@ -52,12 +52,13 @@ def main(args):
 
     # 2. Define model
     n = 32
+    #model = PolyInvariance(n)
     #model = GroupInvariance(n)
-    #model = GroupInvarianceConv(n)
+    model = GroupInvarianceConv(n)
     #model = SimpleNet(n)
     #model = Conv1d(n)
     #model = SegmentNet(n)
-    model = Maron(n)
+    #model = Maron(n)
     #model = MessagePassing(n)
 
 
@@ -98,11 +99,11 @@ def main(args):
             #areas.append(area)
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
-                #pred = model(quad, training=True)
-                pred, L = model(quad, training=True)
+                pred = model(quad, training=True)
+                #pred, L = model(quad, training=True)
 
                 ## check model size
-                if True:
+                if False:
                     nw = 0
                     for layer in model.layers:
                         for l in layer.get_weights():

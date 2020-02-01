@@ -11,7 +11,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-from models.area4_small import GroupInvariance, SimpleNet, Conv1d, SegmentNet, GroupInvarianceConv, Maron, MessagePassing
+from models.area7_small import GroupInvariance, SimpleNet, Conv1d, SegmentNet, GroupInvarianceConv, Maron, MessagePassing
 
 # add parent (root) to pythonpath
 from dataset import scenarios
@@ -41,8 +41,8 @@ def _ds(title, ds, ds_size, i, batch_size):
 
 def main(args):
     # 1. Get datasets
-    train_ds, train_size = scenarios.area4_dataset(args.scenario_path)
-    val_ds, val_size = scenarios.area4_dataset(args.scenario_path.replace("train", "val"))
+    train_ds, train_size = scenarios.area_dataset(args.scenario_path)
+    val_ds, val_size = scenarios.area_dataset(args.scenario_path.replace("train", "val"))
 
     #val_bs = 16
     val_bs = args.batch_size
@@ -102,7 +102,7 @@ def main(args):
                 pred, L = model(quad, training=True)
 
                 ## check model size
-                if True:
+                if False:
                     nw = 0
                     for layer in model.layers:
                         for l in layer.get_weights():
@@ -116,7 +116,7 @@ def main(args):
                 #print(model_loss)
 
                 reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
-                total_loss = model_loss #+ L
+                total_loss = model_loss + L
 
             # 5.1.2 Take gradients (if necessary apply regularization like clipping),
             grads = tape.gradient(total_loss, model.trainable_variables)
@@ -156,8 +156,8 @@ def main(args):
         acc = []
         for i, quad, area in _ds('Validation', val_ds, val_size, epoch, val_bs):
             # 5.2.1 Make inference of the model for validation and calculate losses
-            pred = model(quad, training=True)
-            #pred, L = model(quad, training=True)
+            #pred = model(quad, training=True)
+            pred, L = model(quad, training=True)
 
             model_loss = tf.keras.losses.mean_absolute_error(area[:, tf.newaxis], pred)
 

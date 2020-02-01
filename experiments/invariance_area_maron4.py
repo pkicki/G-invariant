@@ -102,7 +102,7 @@ def main(args):
                 pred, L = model(quad, training=True)
 
                 ## check model size
-                if True:
+                if False:
                     nw = 0
                     for layer in model.layers:
                         for l in layer.get_weights():
@@ -116,7 +116,7 @@ def main(args):
                 #print(model_loss)
 
                 reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
-                total_loss = model_loss #+ L
+                total_loss = model_loss + L
 
             # 5.1.2 Take gradients (if necessary apply regularization like clipping),
             grads = tape.gradient(total_loss, model.trainable_variables)
@@ -156,8 +156,8 @@ def main(args):
         acc = []
         for i, quad, area in _ds('Validation', val_ds, val_size, epoch, val_bs):
             # 5.2.1 Make inference of the model for validation and calculate losses
-            pred = model(quad, training=True)
-            #pred, L = model(quad, training=True)
+            #pred = model(quad, training=True)
+            pred, L = model(quad, training=True)
 
             model_loss = tf.keras.losses.mean_absolute_error(area[:, tf.newaxis], pred)
 

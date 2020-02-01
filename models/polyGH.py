@@ -12,47 +12,20 @@ def groupAvereaging(inputs, operation):
     x = inputs
     a, b, c, d, e = tf.unstack(x, axis=1)
 
-    # Z5 in S5
-    #x1 = x
-    #x2 = tf.stack([b, c, d, e, a], axis=1)
-    #x3 = tf.stack([c, d, e, a, b], axis=1)
-    #x4 = tf.stack([d, e, a, b, c], axis=1)
-    #x5 = tf.stack([e, a, b, c, d], axis=1)
-
-    # x6 = tf.stack([c, a, b, e, d], axis=1)
-    # x2 = tf.stack([b, c, a, e, d], axis=1)
-    # x3 = tf.stack([c, a, b, d, e], axis=1)
-    # x4 = tf.stack([a, b, c, e, d], axis=1)
-    # x5 = tf.stack([b, c, a, d, e], axis=1)
-    # x6 = tf.stack([c, a, b, e, d], axis=1)
-
-    # D8 in S5
+    # Z4 in S5
     x1 = x
     x2 = tf.stack([b, c, d, a, e], axis=1)
     x3 = tf.stack([c, d, a, b, e], axis=1)
     x4 = tf.stack([d, a, b, c, e], axis=1)
 
-    x5 = tf.stack([d, c, b, a, e], axis=1)
-    x6 = tf.stack([c, b, a, d, e], axis=1)
-    x7 = tf.stack([b, a, d, c, e], axis=1)
-    x8 = tf.stack([a, d, c, b, e], axis=1)
-
-    # x = tf.stack([x1, x2, x3, x4, x5, x6], 1)
-    #x = tf.stack([x1, x2, x3, x4, x5], 1)
-    #x = operation(x)
-
     x1 = operation(x1)
     x2 = operation(x2)
     x3 = operation(x3)
     x4 = operation(x4)
-    x5 = operation(x5)
-    x6 = operation(x6)
-    x7 = operation(x7)
-    x8 = operation(x8)
 
     #x = tf.reduce_mean(x, 1)
     #x = tf.reduce_mean(tf.stack([x1, x2, x3, x4, x5], -1), -1)
-    x = tf.reduce_mean(tf.stack([x1, x2, x3, x4, x5, x6, x7, x8], -1), -1)
+    x = tf.reduce_mean(tf.stack([x1, x2, x3, x4], -1), -1)
     return x
 
 
@@ -62,13 +35,13 @@ class GroupInvariance(tf.keras.Model):
         self.features = [
             tf.keras.layers.Dense(16, activation),
             tf.keras.layers.Dense(64, activation),
-            tf.keras.layers.Dense(5 * 64, tf.keras.activations.sigmoid),
+            #tf.keras.layers.Dense(5 * 4, tf.keras.activations.sigmoid),
+            tf.keras.layers.Dense(5 * 8, None),
             # tf.keras.layers.Dense(5 * 64),
         ]
 
         self.fc = [
-            # tf.keras.layers.Dense(num_features, activation),
-            tf.keras.layers.Dense(num_features, tf.keras.activations.relu, use_bias=False),
+            tf.keras.layers.Dense(num_features, tf.keras.activations.tanh),
             tf.keras.layers.Dense(1),
         ]
 
@@ -80,28 +53,20 @@ class GroupInvariance(tf.keras.Model):
             x = layer(x)
         x = tf.reshape(x, (bs, n_points, -1, 5))
         a, b, c, d, e = tf.unstack(x, axis=1)
-        # x = a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-        #    + b[:, :, 0] * c[:, :, 1] * a[:, :, 2] * e[:, :, 3] * d[:, :, 4] \
-        #    + c[:, :, 0] * a[:, :, 1] * b[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-        #    + a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * e[:, :, 3] * d[:, :, 4] \
-        #    + b[:, :, 0] * c[:, :, 1] * a[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-        #    + c[:, :, 0] * a[:, :, 1] * b[:, :, 2] * e[:, :, 3] * d[:, :, 4]
-        # Z5 in S5
-        #x = a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-        #    + e[:, :, 0] * a[:, :, 1] * b[:, :, 2] * c[:, :, 3] * d[:, :, 4] \
-        #    + d[:, :, 0] * e[:, :, 1] * a[:, :, 2] * b[:, :, 3] * c[:, :, 4] \
-        #    + c[:, :, 0] * d[:, :, 1] * e[:, :, 2] * a[:, :, 3] * b[:, :, 4] \
-        #    + b[:, :, 0] * c[:, :, 1] * d[:, :, 2] * e[:, :, 3] * a[:, :, 4]
 
-        # D8 in S5
+        # Z4 in S5
+        #x = a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+        #    + d[:, :, 0] * a[:, :, 1] * b[:, :, 2] * c[:, :, 3] * e[:, :, 4] \
+        #    + c[:, :, 0] * d[:, :, 1] * a[:, :, 2] * b[:, :, 3] * e[:, :, 4] \
+        #    + b[:, :, 0] * c[:, :, 1] * d[:, :, 2] * a[:, :, 3] * e[:, :, 4]
+
+        # S3 in S5
         x = a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-            + d[:, :, 0] * a[:, :, 1] * b[:, :, 2] * c[:, :, 3] * e[:, :, 4] \
-            + c[:, :, 0] * d[:, :, 1] * a[:, :, 2] * b[:, :, 3] * e[:, :, 4] \
-            + b[:, :, 0] * c[:, :, 1] * d[:, :, 2] * a[:, :, 3] * e[:, :, 4] \
-            + d[:, :, 0] * c[:, :, 1] * b[:, :, 2] * a[:, :, 3] * e[:, :, 4] \
-            + c[:, :, 0] * b[:, :, 1] * a[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-            + b[:, :, 0] * a[:, :, 1] * d[:, :, 2] * c[:, :, 3] * e[:, :, 4] \
-            + a[:, :, 0] * d[:, :, 1] * c[:, :, 2] * b[:, :, 3] * e[:, :, 4]
+            + a[:, :, 0] * c[:, :, 1] * b[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + b[:, :, 0] * a[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + b[:, :, 0] * c[:, :, 1] * a[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + c[:, :, 0] * a[:, :, 1] * b[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + c[:, :, 0] * b[:, :, 1] * a[:, :, 2] * d[:, :, 3] * e[:, :, 4]
 
         for layer in self.fc:
             x = layer(x)

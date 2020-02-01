@@ -11,7 +11,6 @@ sys.path.insert(0, parentdir)
 
 from models.poly import GroupInvariance, SimpleNet, MessagePassing, Maron, Conv1d, GroupInvarianceConv
 # add parent (root) to pythonpath
-from dataset import scenarios
 from argparse import ArgumentParser
 
 import tensorflow as tf
@@ -21,7 +20,7 @@ from tqdm import tqdm
 from dl_work.utils import ExperimentHandler, LoadFromFile
 
 tf.enable_eager_execution()
-#tf.set_random_seed(444)
+# tf.set_random_seed(444)
 np.random.seed(444)
 
 _tqdm = lambda t, s, i: tqdm(
@@ -46,6 +45,16 @@ def poly_simple(x):
     return q1
 
 
+def poly_d8(x):
+    def inv1(a, b):
+        return a * b ** 2
+
+    a, b, c, d, e = tf.unstack(x, axis=1)
+    q1 = inv1(a, b) + inv1(b, c) + inv1(c, d) + inv1(d, a) + \
+         inv1(b, a) + inv1(c, b) + inv1(d, c) + inv1(a, d)
+    return q1 + e
+
+
 def main(args):
     # 1. Get datasets
     ts = int(1e0)
@@ -60,10 +69,10 @@ def main(args):
     # 2. Define model
     n = 32
     #model = GroupInvariance(n)
-    model = GroupInvarianceConv(n)
+    #model = GroupInvarianceConv(n)
     #model = SimpleNet(n)
-    #model = MessagePassing(n)
-    #model = Maron(n)
+    # model = MessagePassing(n)
+    model = Maron(n)
     #model = Conv1d(n)
 
     # 3. Optimization
@@ -91,8 +100,8 @@ def main(args):
         for i in tqdm(range(ts), "Train"):
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
-                #pred, L = model(train_ds[i], training=True)
-                pred = model(train_ds[i], training=True)
+                pred, L = model(train_ds[i], training=True)
+                #pred = model(train_ds[i], training=True)
 
                 ## check model size
                 if False:
@@ -105,11 +114,12 @@ def main(args):
                             nw += a
                     print(nw)
 
-                y = poly_simple(train_ds[i])
+                #y = poly_simple(train_ds[i])
+                y = poly_d8(train_ds[i])
                 model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
 
                 reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
-                total_loss = model_loss #+ L
+                total_loss = model_loss + L
 
             # 5.1.2 Take gradients (if necessary apply regularization like clipping),
             grads = tape.gradient(total_loss, model.trainable_variables)
@@ -148,10 +158,11 @@ def main(args):
         acc = []
         for i in tqdm(range(vs), "Val"):
             # 5.2.1 Make inference of the model for validation and calculate losses
-            #pred, L = model(val_ds[i], training=False)
-            pred = model(val_ds[i], training=False)
+            pred, L = model(val_ds[i], training=False)
+            #pred = model(val_ds[i], training=False)
 
-            y = poly_simple(val_ds[i])
+            #y = poly_simple(val_ds[i])
+            y = poly_d8(val_ds[i])
             model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
 
             acc = acc + list(model_loss.numpy())
@@ -175,14 +186,14 @@ def main(args):
         # break
 
         # 5.3 Save last and best
-        #if epoch_accuracy < best_accuracy:
+        # if epoch_accuracy < best_accuracy:
         #    experiment_handler.save_best()
         #    best_accuracy = epoch_accuracy
-        #experiment_handler.save_last()
+        # experiment_handler.save_last()
         if epoch_accuracy < best_accuracy:
             model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/best-" + str(epoch))
             best_accuracy = epoch_accuracy
-        #model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/last_n-" + str(epoch))
+        # model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/last_n-" + str(epoch))
 
         experiment_handler.flush()
 

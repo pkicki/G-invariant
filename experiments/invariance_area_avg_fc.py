@@ -11,7 +11,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-from models.area4_small import GroupInvariance, SimpleNet, Conv1d, SegmentNet, GroupInvarianceConv, Maron, MessagePassing
+from models.area7_small import GroupInvariance, SimpleNet, Conv1d, SegmentNet, GroupInvarianceConv, Maron, MessagePassing
 
 # add parent (root) to pythonpath
 from dataset import scenarios
@@ -41,8 +41,8 @@ def _ds(title, ds, ds_size, i, batch_size):
 
 def main(args):
     # 1. Get datasets
-    train_ds, train_size = scenarios.area4_dataset(args.scenario_path)
-    val_ds, val_size = scenarios.area4_dataset(args.scenario_path.replace("train", "val"))
+    train_ds, train_size = scenarios.area_dataset(args.scenario_path)
+    val_ds, val_size = scenarios.area_dataset(args.scenario_path.replace("train", "val"))
 
     #val_bs = 16
     val_bs = args.batch_size
@@ -52,12 +52,13 @@ def main(args):
 
     # 2. Define model
     n = 32
+    #model = PolyInvariance(n)
     #model = GroupInvariance(n)
     #model = GroupInvarianceConv(n)
-    #model = SimpleNet(n)
+    model = SimpleNet(n)
     #model = Conv1d(n)
     #model = SegmentNet(n)
-    model = Maron(n)
+    #model = Maron(n)
     #model = MessagePassing(n)
 
 
@@ -98,11 +99,11 @@ def main(args):
             #areas.append(area)
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
-                #pred = model(quad, training=True)
-                pred, L = model(quad, training=True)
+                pred = model(quad, training=True)
+                #pred, L = model(quad, training=True)
 
                 ## check model size
-                if True:
+                if False:
                     nw = 0
                     for layer in model.layers:
                         for l in layer.get_weights():

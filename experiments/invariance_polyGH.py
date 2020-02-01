@@ -1,20 +1,16 @@
 import inspect
 import os
 import sys
-from time import sleep
-
 import numpy as np
 
-#os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-from models.area4_small import GroupInvariance, SimpleNet, Conv1d, SegmentNet, GroupInvarianceConv, Maron, MessagePassing
-
+from models.polyGH import GroupInvariance, SimpleNet, MessagePassing, Maron, Conv1d, GroupInvarianceConv
 # add parent (root) to pythonpath
-from dataset import scenarios
 from argparse import ArgumentParser
 
 import tensorflow as tf
@@ -24,7 +20,8 @@ from tqdm import tqdm
 from dl_work.utils import ExperimentHandler, LoadFromFile
 
 tf.enable_eager_execution()
-#tf.set_random_seed(444)
+# tf.set_random_seed(444)
+np.random.seed(444)
 
 _tqdm = lambda t, s, i: tqdm(
     ncols=80,
@@ -39,27 +36,46 @@ def _ds(title, ds, ds_size, i, batch_size):
             pbar.update(batch_size)
 
 
+def poly_S3xS2(x):
+    a, b, c, d, e = tf.unstack(x, axis=1)
+    q1 = a*b*c + d*e
+    return q1
+
+def poly_S3(x):
+    a, b, c, d, e = tf.unstack(x, axis=1)
+    q1 = a * b * c + d ** 2 + e
+    return q1
+
+def poly_Z3(x):
+    def inv1(a, b):
+        return a * b ** 2
+
+    a, b, c, d, e = tf.unstack(x, axis=1)
+    q1 = inv1(a, b) + inv1(b, c) + inv1(c, a) + d ** 2 + e
+    return q1
+
+
 def main(args):
     # 1. Get datasets
-    train_ds, train_size = scenarios.area4_dataset(args.scenario_path)
-    val_ds, val_size = scenarios.area4_dataset(args.scenario_path.replace("train", "val"))
+    ts = int(1e0)
+    #ts = int(1e1)
+    #ts = int(3e1)
+    vs = int(3e1)
+    train_size = int(args.batch_size * ts)
+    val_size = int(args.batch_size * vs)
 
-    #val_bs = 16
-    val_bs = args.batch_size
-    val_ds = val_ds \
-        .batch(val_bs) \
-        .prefetch(val_bs)
+    d = 5
+    train_ds = np.random.rand(ts, args.batch_size, d)
+    val_ds = np.random.rand(vs, args.batch_size, d)
 
     # 2. Define model
     n = 32
-    #model = GroupInvariance(n)
+    model = GroupInvariance(n)
     #model = GroupInvarianceConv(n)
     #model = SimpleNet(n)
+    # model = MessagePassing(n)
+    #model = Maron(n)
     #model = Conv1d(n)
-    #model = SegmentNet(n)
-    model = Maron(n)
-    #model = MessagePassing(n)
-
 
     # 3. Optimization
 
@@ -75,34 +91,22 @@ def main(args):
 
     # 4. Restore, Log & Save
     experiment_handler = ExperimentHandler(args.working_path, args.out_name, args.log_interval, model, optimizer)
-    #model.load_weights("./working_dir/area/tmp/checkpoints/last_n-15")
 
     # 5. Run everything
     train_step, val_step = 0, 0
     best_accuracy = 1e10
     for epoch in range(args.num_epochs):
-        # workaround for tf problems with shuffling
-        dataset_epoch = train_ds.shuffle(train_size)
-        dataset_epoch = dataset_epoch.batch(args.batch_size).prefetch(args.batch_size)
-        #dataset_epoch = train_ds
-
         # 5.1. Training Loop
-        accuracy = tfc.eager.metrics.Accuracy('metrics/accuracy')
-        accuracy_90 = tfc.eager.metrics.Accuracy('metrics/accuracy_90')
         experiment_handler.log_training()
         acc = []
-        quads = []
-        areas = []
-        for i, quad, area, in _ds('Train', dataset_epoch, train_size, epoch, args.batch_size):
-            #quads.append(quad)
-            #areas.append(area)
+        for i in tqdm(range(ts), "Train"):
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
-                #pred = model(quad, training=True)
-                pred, L = model(quad, training=True)
+                #pred, L = model(train_ds[i], training=True)
+                pred = model(train_ds[i], training=True)
 
                 ## check model size
-                if True:
+                if False:
                     nw = 0
                     for layer in model.layers:
                         for l in layer.get_weights():
@@ -112,8 +116,9 @@ def main(args):
                             nw += a
                     print(nw)
 
-                model_loss = tf.keras.losses.mean_absolute_error(area[:, tf.newaxis], pred)
-                #print(model_loss)
+                #y = poly_simple(train_ds[i])
+                y = poly_Z3(train_ds[i])
+                model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
 
                 reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
                 total_loss = model_loss #+ L
@@ -135,11 +140,10 @@ def main(args):
             # 5.1.5 Update meta variables
             eta.assign(eta_f())
             train_step += 1
-
-        #print(np.min(np.array(quads)))
-        #print(np.max(np.array(quads)))
-        #print(np.min(np.array(area)))
-        #print(np.max(np.array(area)))
+            # if train_step % 20 == 0:
+            #    _plot(x_path, y_path, th_path, env, train_step)
+            # _plot(x_path, y_path, th_path, data, train_step)
+        # epoch_accuracy = tf.reduce_mean(tf.concat(acc, -1))
 
         # 5.1.6 Take statistics over epoch
         with tfc.summary.always_record_summaries():
@@ -154,12 +158,14 @@ def main(args):
         accuracy = tfc.eager.metrics.Accuracy('metrics/accuracy')
         experiment_handler.log_validation()
         acc = []
-        for i, quad, area in _ds('Validation', val_ds, val_size, epoch, val_bs):
+        for i in tqdm(range(vs), "Val"):
             # 5.2.1 Make inference of the model for validation and calculate losses
-            pred = model(quad, training=True)
-            #pred, L = model(quad, training=True)
+            #pred, L = model(val_ds[i], training=False)
+            pred = model(val_ds[i], training=False)
 
-            model_loss = tf.keras.losses.mean_absolute_error(area[:, tf.newaxis], pred)
+            #y = poly_simple(val_ds[i])
+            y = poly_Z3(val_ds[i])
+            model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
 
             acc = acc + list(model_loss.numpy())
 
@@ -176,22 +182,27 @@ def main(args):
             tfc.summary.scalar('epoch/accuracy', epoch_accuracy, step=epoch)
 
         with open(args.working_path + "/" + args.out_name + "/" + model.name + ".csv", 'a') as fh:
-                fh.write("VAL, %d, %.6f\n" % (epoch, epoch_accuracy))
+            fh.write("VAL, %d, %.6f\n" % (epoch, epoch_accuracy))
+
+        # print(epoch_accuracy)
+        # break
 
         # 5.3 Save last and best
+        # if epoch_accuracy < best_accuracy:
+        #    experiment_handler.save_best()
+        #    best_accuracy = epoch_accuracy
+        # experiment_handler.save_last()
         if epoch_accuracy < best_accuracy:
             model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/best-" + str(epoch))
             best_accuracy = epoch_accuracy
-        model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/last_n-" + str(epoch))
+        # model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/last_n-" + str(epoch))
 
         experiment_handler.flush()
-
 
 
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--config-file', action=LoadFromFile, type=open)
-    parser.add_argument('--scenario-path', type=str)
     parser.add_argument('--working-path', type=str, default='./working_dir')
     parser.add_argument('--num-epochs', type=int)
     parser.add_argument('--batch-size', type=int)
