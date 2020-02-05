@@ -72,12 +72,20 @@ class GroupInvariance(tf.keras.Model):
             tf.keras.layers.Dense(1),
         ]
 
-        m = 24
+        self.m = 12
         n = 5
         p1 = np.eye(n)
-        p = np.tile(np.eye(n)[np.newaxis], (m, 1, 1))
+        p = np.tile(np.eye(n)[np.newaxis], (self.m, 1, 1))
 
-        perm = list(permutations(range(4)))
+        # (1,2,3) i (1,3,2)
+        # (1,2,4) i (1,4,2)
+        # (1,3,4) i (1,4,3)
+        # (2,3,4) i (2,4,3)
+        # (1,2) (3,4)
+        # (1,3) (2,4)
+        # (1,4) (2,3)
+        perm = [[0, 1, 2, 3], [1, 2, 0, 3], [2, 0, 1, 3], [3, 0, 2, 1], [1, 3, 2, 0], [3, 1, 0, 2], [2, 1, 3, 0],
+                [0, 3, 1, 2], [0, 2, 3, 1], [1, 0, 3, 2], [2, 3, 0, 1], [3, 2, 1, 0]]
         perm = [list(x) + [4] for x in perm]
 
         for i, x in enumerate(perm):
@@ -93,21 +101,10 @@ class GroupInvariance(tf.keras.Model):
             x = layer(x)
         x = tf.reshape(x, (bs, n_points, -1, 5))
 
-        # A4 in S5
-        #f = list(permutations(range(4)))
-        #r = tf.zeros((bs, 2), dtype=tf.float64)
-        #for p in f:
-        #    m = tf.ones((bs, 2), dtype=tf.float64)
-        #    for i, k in enumerate(p):
-        #        m = m * x[:, k, :, i]
-        #    r += m * x[:, 4, :, 4]
-
-        #x = r
-
         fin = x
         fin = np.transpose(fin, (0, 2, 1, 3))
         fin = fin[:, :, np.newaxis]
-        fin = np.tile(fin, (1, 1, 24, 1, 1))
+        fin = np.tile(fin, (1, 1, self.m, 1, 1))
         y = fin @ self.p
         y = y[:, :, :, np.arange(5), np.arange(5)]
         y = np.prod(y, axis=3)
@@ -115,17 +112,26 @@ class GroupInvariance(tf.keras.Model):
         x = y
 
         #a, b, c, d, e = tf.unstack(x, axis=1)
-        #def h(a, b, c, d):
-        #    return a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4]
 
-        #x = h(a, b, c, d) + h(a, b, d, c) + h(a, c, b, d) + h(a, c, d, b) + h(a, d, c, b) + h(a, d, b, c) + \
-        #    h(b, a, c, d) + h(b, a, d, c) + h(b, c, a, d) + h(b, c, d, a) + h(b, d, c, a) + h(b, d, a, c) + \
-        #    h(c, b, a, d) + h(c, b, d, a) + h(c, a, b, d) + h(c, a, d, b) + h(c, d, a, b) + h(c, d, b, a) + \
-        #    h(d, b, c, a) + h(d, b, a, c) + h(d, c, b, a) + h(d, c, a, b) + h(d, a, c, b) + h(d, a, b, c)
+        ## A4 in S5
+        #x = a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] + \
+        #    c[:, :, 0] * a[:, :, 1] * b[:, :, 2] * d[:, :, 3] * e[:, :, 4] + \
+        #    b[:, :, 0] * c[:, :, 1] * a[:, :, 2] * d[:, :, 3] * e[:, :, 4] + \
+        #    d[:, :, 0] * a[:, :, 1] * c[:, :, 2] * b[:, :, 3] * e[:, :, 4] + \
+        #    b[:, :, 0] * d[:, :, 1] * c[:, :, 2] * a[:, :, 3] * e[:, :, 4] + \
+        #    d[:, :, 0] * b[:, :, 1] * a[:, :, 2] * c[:, :, 3] * e[:, :, 4] + \
+        #    c[:, :, 0] * b[:, :, 1] * d[:, :, 2] * a[:, :, 3] * e[:, :, 4] + \
+        #    a[:, :, 0] * d[:, :, 1] * b[:, :, 2] * c[:, :, 3] * e[:, :, 4] + \
+        #    a[:, :, 0] * c[:, :, 1] * d[:, :, 2] * b[:, :, 3] * e[:, :, 4] + \
+        #    b[:, :, 0] * a[:, :, 1] * d[:, :, 2] * c[:, :, 3] * e[:, :, 4] + \
+        #    c[:, :, 0] * d[:, :, 1] * a[:, :, 2] * b[:, :, 3] * e[:, :, 4] + \
+        #    d[:, :, 0] * c[:, :, 1] * b[:, :, 2] * a[:, :, 3] * e[:, :, 4]
+
 
 
         for layer in self.fc:
             x = layer(x)
+        # x = tf.reduce_sum(x, 1, keep_dims=True)
 
         return x
 
