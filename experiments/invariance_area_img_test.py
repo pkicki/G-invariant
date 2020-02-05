@@ -2,6 +2,7 @@ import inspect
 import os
 import sys
 from glob import glob
+from time import time
 
 import numpy as np
 
@@ -11,7 +12,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-from models.area4 import GroupInvariance, SimpleNet, Conv1d, SegmentNet, GroupInvarianceConv, \
+from models.area4_small import GroupInvariance, SimpleNet, Conv1d, SegmentNet, GroupInvarianceConv, \
     ConvImg
 
 # add parent (root) to pythonpath
@@ -51,9 +52,10 @@ def main(args):
     model = ConvImg(n)
 
     base_name = "conv_img"
-    path = "./working_dir/area/"
+    path = "./working_dir/area4/"
     mae = []
 
+    times = []
     for i in range(1, 10):
         best_path = sorted(glob(path + base_name + "_" + str(i) + "/checkpoints/best*.index"),
                            key=lambda x: (len(x), x))[-1].replace(".index", "")
@@ -66,7 +68,10 @@ def main(args):
         for i, quad, area, img in _ds('Train', dataset_epoch, train_size, 0, args.batch_size):
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
+                start = time()
                 pred = model(img[:, :, :, tf.newaxis], training=True)
+                end = time()
+                times.append(end - start)
 
                 model_loss = tf.keras.losses.mean_absolute_error(area[:, tf.newaxis], pred)
 
@@ -77,6 +82,8 @@ def main(args):
 
     print(np.mean(mae))
     print(np.std(mae))
+    print(np.mean(times[1:]))
+    print(np.std(times[1:]))
 
 if __name__ == '__main__':
     parser = ArgumentParser()

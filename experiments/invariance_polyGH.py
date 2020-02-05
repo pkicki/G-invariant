@@ -38,12 +38,12 @@ def _ds(title, ds, ds_size, i, batch_size):
 
 def poly_S3xS2(x):
     a, b, c, d, e = tf.unstack(x, axis=1)
-    q1 = a*b*c + d*e
+    q1 = a*b*c + d + e
     return q1
 
 def poly_S3(x):
     a, b, c, d, e = tf.unstack(x, axis=1)
-    q1 = a * b * c + d ** 2 + e
+    q1 = a * b * c + 2 * d + e
     return q1
 
 def poly_Z3(x):
@@ -51,9 +51,10 @@ def poly_Z3(x):
         return a * b ** 2
 
     a, b, c, d, e = tf.unstack(x, axis=1)
-    q1 = inv1(a, b) + inv1(b, c) + inv1(c, a) + d ** 2 + e
+    q1 = inv1(a, b) + inv1(b, c) + inv1(c, a) + 2 * d + e
     return q1
 
+f = poly_Z3
 
 def main(args):
     # 1. Get datasets
@@ -99,6 +100,7 @@ def main(args):
         # 5.1. Training Loop
         experiment_handler.log_training()
         acc = []
+        per = []
         for i in tqdm(range(ts), "Train"):
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
@@ -117,8 +119,9 @@ def main(args):
                     print(nw)
 
                 #y = poly_simple(train_ds[i])
-                y = poly_Z3(train_ds[i])
+                y = f(train_ds[i])
                 model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
+                percent = model_loss / y
 
                 reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
                 total_loss = model_loss #+ L
@@ -130,6 +133,7 @@ def main(args):
                                       global_step=tf.train.get_or_create_global_step())
 
             acc = acc + list(model_loss.numpy())
+            per = per + list(percent.numpy())
 
             # 5.1.4 Save logs for particular interval
             with tfc.summary.record_summaries_every_n_global_steps(args.log_interval, train_step):
@@ -148,9 +152,11 @@ def main(args):
         # 5.1.6 Take statistics over epoch
         with tfc.summary.always_record_summaries():
             tfc.summary.scalar('epoch/accuracy', np.mean(acc), step=epoch)
+            tfc.summary.scalar('epoch/percent', np.mean(per), step=epoch)
 
         with open(args.working_path + "/" + args.out_name + "/" + model.name + ".csv", 'a') as fh:
             fh.write("TRAIN, %d, %.6f\n" % (epoch, np.mean(acc)))
+            fh.write("TRAIN, %d, %.6f\n" % (epoch, np.mean(per)))
 
         #    accuracy.result()
 
@@ -158,16 +164,19 @@ def main(args):
         accuracy = tfc.eager.metrics.Accuracy('metrics/accuracy')
         experiment_handler.log_validation()
         acc = []
+        per = []
         for i in tqdm(range(vs), "Val"):
             # 5.2.1 Make inference of the model for validation and calculate losses
             #pred, L = model(val_ds[i], training=False)
             pred = model(val_ds[i], training=False)
 
             #y = poly_simple(val_ds[i])
-            y = poly_Z3(val_ds[i])
+            y = f(val_ds[i])
             model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
+            percent = model_loss / y
 
             acc = acc + list(model_loss.numpy())
+            per = per + list(percent.numpy())
 
             # 5.2.3 Print logs for particular interval
             with tfc.summary.record_summaries_every_n_global_steps(args.log_interval, val_step):
@@ -180,9 +189,11 @@ def main(args):
         # 5.2.5 Take statistics over epoch
         with tfc.summary.always_record_summaries():
             tfc.summary.scalar('epoch/accuracy', epoch_accuracy, step=epoch)
+            tfc.summary.scalar('epoch/percent', np.mean(per), step=epoch)
 
         with open(args.working_path + "/" + args.out_name + "/" + model.name + ".csv", 'a') as fh:
             fh.write("VAL, %d, %.6f\n" % (epoch, epoch_accuracy))
+            fh.write("VAL, %d, %.6f\n" % (epoch, np.mean(per)))
 
         # print(epoch_accuracy)
         # break

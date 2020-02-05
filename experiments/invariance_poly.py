@@ -36,7 +36,7 @@ def _ds(title, ds, ds_size, i, batch_size):
             pbar.update(batch_size)
 
 
-def poly_simple(x):
+def poly_Z5(x):
     def inv1(a, b):
         return a * b ** 2
 
@@ -68,11 +68,11 @@ def main(args):
 
     # 2. Define model
     n = 32
-    #model = GroupInvariance(n)
+    model = GroupInvariance(n)
     #model = GroupInvarianceConv(n)
     #model = SimpleNet(n)
     # model = MessagePassing(n)
-    model = Maron(n)
+    #model = Maron(n)
     #model = Conv1d(n)
 
     # 3. Optimization
@@ -100,11 +100,11 @@ def main(args):
         for i in tqdm(range(ts), "Train"):
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
-                pred, L = model(train_ds[i], training=True)
-                #pred = model(train_ds[i], training=True)
+                #pred, L = model(train_ds[i], training=True)
+                pred = model(train_ds[i], training=True)
 
                 ## check model size
-                if False:
+                if True:
                     nw = 0
                     for layer in model.layers:
                         for l in layer.get_weights():
@@ -114,12 +114,12 @@ def main(args):
                             nw += a
                     print(nw)
 
-                #y = poly_simple(train_ds[i])
-                y = poly_d8(train_ds[i])
+                y = poly_Z5(train_ds[i])
+                #y = poly_d8(train_ds[i])
                 model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
 
                 reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
-                total_loss = model_loss + L
+                total_loss = model_loss #+ L
 
             # 5.1.2 Take gradients (if necessary apply regularization like clipping),
             grads = tape.gradient(total_loss, model.trainable_variables)
@@ -158,11 +158,11 @@ def main(args):
         acc = []
         for i in tqdm(range(vs), "Val"):
             # 5.2.1 Make inference of the model for validation and calculate losses
-            pred, L = model(val_ds[i], training=False)
-            #pred = model(val_ds[i], training=False)
+            #pred, L = model(val_ds[i], training=False)
+            pred = model(val_ds[i], training=False)
 
-            #y = poly_simple(val_ds[i])
-            y = poly_d8(val_ds[i])
+            y = poly_Z5(val_ds[i])
+            #y = poly_d8(val_ds[i])
             model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
 
             acc = acc + list(model_loss.numpy())

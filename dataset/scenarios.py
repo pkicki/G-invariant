@@ -202,17 +202,48 @@ def area4_dataset(path):
     return ds, len(scenarios)
 
 
+def area7_dataset(path):
+    def read_scn(scn_path):
+        scn_path = os.path.join(path, scn_path)
+        data = np.loadtxt(scn_path, delimiter='\t', dtype=np.float32)
+        x = data[:7]
+        y = data[7:14]
+        xy = tf.stack([x, y], -1)
+        area = data[14]
+        return xy, area
+
+    scenarios = [read_scn(f) for f in sorted(os.listdir(path)) if f.endswith(".scn")]
+
+    def gen():
+        for i in range(len(scenarios)):
+            yield scenarios[i][0], scenarios[i][1]
+
+    ds = tf.data.Dataset.from_generator(gen, (tf.float32, tf.float32)) \
+        .shuffle(buffer_size=len(scenarios), reshuffle_each_iteration=True)
+
+    return ds, len(scenarios)
+
+
 def area_img_dataset(path):
     def read_scn(scn_path):
         scn_path = os.path.join(path, scn_path)
         data = np.loadtxt(scn_path, delimiter='\t', dtype=np.float32)
         # x = data[:3]
         x = data[:4]
+        #x = data[:5]
+        #x = data[:6]
+        #x = data[:7]
         # y = data[3:6]
         y = data[4:8]
+        #y = data[5:10]
+        #y = data[6:12]
+        #y = data[7:14]
         xy = tf.stack([x, y], -1)
         # area = data[6]
         area = data[8]
+        #area = data[10]
+        #area = data[12]
+        #area = data[14]
         png_path = scn_path.replace("scn", "png")
         img = mpimg.imread(png_path)
         return xy, area, img

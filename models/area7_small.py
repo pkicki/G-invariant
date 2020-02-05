@@ -219,28 +219,21 @@ class ConvImg(tf.keras.Model):
         self.last_n = 128  # * 3
         self.features = [
             # tf.keras.layers.Conv2D(16, 3, activation=activation),
-            #tf.keras.layers.Conv2D(8, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(16, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(4, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
-            # tf.keras.layers.Conv2D(16, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(16, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(4, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
-            #tf.keras.layers.Conv2D(32, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(16, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(4, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
-            #tf.keras.layers.Conv2D(32, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(16, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(8, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
-            # tf.keras.layers.Conv2D(64, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(32, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(8, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
-            tf.keras.layers.Conv2D(64, 3, padding='same', activation=activation),
-            #tf.keras.layers.Conv2D(32, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(8, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
         ]
         # self.fc = tf.keras.layers.Dense(num_features, activation=activation)
         self.fc = [
-            tf.keras.layers.Dense(64, activation=activation),
             tf.keras.layers.Dense(16, activation=activation),
             tf.keras.layers.Dense(1),
         ]

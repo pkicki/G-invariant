@@ -7,8 +7,11 @@ from time import time
 import numpy as np
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-from experiments.invariance_poly import poly_simple
-from models.poly import GroupInvariance, SimpleNet, MessagePassing, Maron, Conv1d, GroupInvarianceConv
+from experiments.invariance_poly_A4 import poly_A4
+from experiments.invariance_poly_D8 import poly_D8
+from experiments.invariance_poly_S4 import poly_S4
+from experiments.invariance_poly_Z5 import poly_Z5
+from models.poly_S4 import GroupInvariance, SimpleNet, MessagePassing, Maron, Conv1d, GroupInvarianceConv
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
@@ -34,77 +37,77 @@ _tqdm = lambda t, s, i: tqdm(
     bar_format='%s epoch %d | {l_bar}{bar} | Remaining: {remaining}' % (t, i))
 
 
-def main(args):
+def main():
+    batch_size = 16
     # 1. Get datasets
     ts = int(1e0)
     vs = int(3e1)
     s = int(3e2)
 
     d = 5
-    train_ds = np.random.rand(ts, args.batch_size, d)
-    val_ds = np.random.rand(vs, args.batch_size, d)
-    test_ds = np.random.rand(s, args.batch_size, d)
+    train_ds = np.random.rand(ts, batch_size, d)
+    val_ds = np.random.rand(vs, batch_size, d)
+    test_ds = np.random.rand(s, batch_size, d)
+
+    #dss = [("train", train_ds)]
+    #dss = [("train", train_ds), ("val", val_ds), ("test", test_ds)]
+    dss = [("test", test_ds)]
 
     # 2. Define model
     n = 32
-    #model = GroupInvariance(n)
-    model = GroupInvarianceConv(n)
-    #model = SimpleNet(n)
-    #model = MessagePassing(n)
-    #model = Maron(n)
-    #model = Conv1d(n)
+    #path = "./working_dir/poly_D8/"
+    #path = "./working_dir/poly_Z5/"
+    path = "./working_dir/poly_S4/"
 
-    #ds = train_ds
-    ds = val_ds
-    #ds = test_ds
+    models = [("my_inv_fc", GroupInvariance(n))]
+    #models = [("my_inv_fc", GroupInvariance(n)), ("my_inv_conv", GroupInvarianceConv(n)), ("avg_fc", SimpleNet(n)),
+              #("avg_conv", Conv1d(n)), ("message_passing", MessagePassing(n)), ("maron", Maron(n))]
 
-    #base_name = "my_inv_fc"
-    #base_name = "avg_fc"
-    #base_name = "conv_avg_imp"
-    base_name = "conv_my_inv"
-    #base_name = "maron"
-    #base_name = "maron_sw"
-    #base_name = "message_passing"
-    path = "./working_dir/poly/"
-    mae = []
-    times = []
-    for i in range(1, 11):
-        best_path = sorted(glob(path + base_name + "_" + str(i) + "/checkpoints/best*.index"),
-                           key=lambda x: (len(x), x))[-1].replace(".index", "")
-        model.load_weights(best_path).expect_partial()
+    results = []
+    for base_name, model in models:
+        for ds_name, ds in dss:
+            mae = []
+            mape = []
+            times = []
+            for i in range(1, 11):
+                best_path = sorted(glob(path + base_name + "_" + str(i) + "/checkpoints/best*.index"),
+                                   key=lambda x: (len(x), x))[-1].replace(".index", "")
+                model.load_weights(best_path).expect_partial()
 
-        acc = []
-        for i in range(len(ds)):
-            # 5. Run everything
-            start = time()
-            #pred, L = model(ds[i], training=True)
-            pred = model(ds[i], training=True)
-            times.append(time() - start)
-            y = poly_simple(ds[i])[:, tf.newaxis]
-            model_loss = tf.keras.losses.mean_absolute_error(y, pred)
-            acc = acc + list(model_loss.numpy())
+                acc = []
+                per = []
+                for i in range(len(ds)):
+                    # 5. Run everything
+                    start = time()
+                    pred = model(ds[i], training=True)
+                    if len(pred) == 2:
+                        pred, L = pred
+                    times.append(time() - start)
 
-        print(np.mean(acc))
-        mae.append(np.mean(acc))
+                    #y = poly_Z5(ds[i])[:, tf.newaxis]
+                    y = poly_S4(ds[i])[:, tf.newaxis]
+                    #y = poly_A4(ds[i])[:, tf.newaxis]
+                    #y = poly_D8(ds[i])[:, tf.newaxis]
+                    model_loss = tf.keras.losses.mean_absolute_error(y, pred)
+                    f = model_loss / y
+                    acc = acc + list(model_loss.numpy())
+                    per = per + list(f.numpy())
 
-    print("RESULTS:")
-    print(np.mean(mae))
-    print(np.std(mae))
-    print(times[1:])
-    print(len(times[1:]))
-    print(np.mean(times[1:]))
-    print(np.std(times[1:]))
+                print(np.mean(acc))
+                mae.append(np.mean(acc))
+                mape.append(np.mean(per))
+            results.append((base_name, ds_name, np.mean(mae), np.std(mae)))
+            print(base_name, ds_name, np.mean(mae), np.std(mae), np.mean(mape), np.std(mape))
+            print(np.mean(times[1:]))
+            print(np.std(times[1:]))
+
+    #with open("./paper/poly_Z5.csv", 'w') as fh:
+    #    for r in results:
+    #        fh.write("%s\t%s\t%.5f\t%.5f\n" % r)
+    #for r in results:
+    #    print("%s\t%s\t%.5f\t%.5f\n" % r)
+
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser()
-    parser.add_argument('--config-file', action=LoadFromFile, type=open)
-    parser.add_argument('--working-path', type=str, default='./working_dir')
-    parser.add_argument('--num-epochs', type=int)
-    parser.add_argument('--batch-size', type=int)
-    parser.add_argument('--log-interval', type=int, default=5)
-    parser.add_argument('--out-name', type=str)
-    parser.add_argument('--eta', type=float, default=5e-4)
-    parser.add_argument('--train-beta', type=float, default=0.99)
-    args, _ = parser.parse_known_args()
-    main(args)
+    main()

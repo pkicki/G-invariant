@@ -9,7 +9,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-from models.area7 import GroupInvariance, SimpleNet, Conv1d, SegmentNet, GroupInvarianceConv, \
+from models.area7_small import GroupInvariance, SimpleNet, Conv1d, SegmentNet, GroupInvarianceConv, \
     ConvImg
 
 # add parent (root) to pythonpath

@@ -142,10 +142,10 @@ def area(path, id=0):
         yc = (1. - d * 2) * random() + d
         # base = np.array([0., pi/2, pi, 3*pi/2])
         # n = 3
-        n = 7
+        n = 10
         b = 2 / n * pi
         base = np.arange(n) * b
-        #base = np.roll(base, randint(0, n - 1))
+        base = np.roll(base, randint(0, n - 1))
         th = b * np.random.random(n) + base
         rb = 0.3 + 0.5 * random()
         r = 0.4 * (np.random.random(n) - 0.5) + rb
@@ -344,16 +344,17 @@ def convex(path, id=0):
 # path = "../../data_inv/train/area4f/"
 # path = "../../data_inv/val/area4e/"
 #path = "../../data_inv/train/area5paper/"
-path = "../../data_inv/train/area7paper_shift/"
+#path = "../../data_inv/train/area7paper_shift/"
+path = "../../data_inv/test/area10paper_shift/"
 #path = "../../data_inv/"
 #path = "../../data_inv/test/two_quads_paper/"
 #path = "../../data_inv/train/convexity/"
 #path = "../../data_inv/test/convexity/"
 # for i in range(256):
 inside_n = 0
-#n = 1024
+n = 1024
 # n = 8192
-n = 256
+#n = 256
 #n = 10
 for i in range(n):
     # for i in range(2048):

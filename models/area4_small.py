@@ -66,7 +66,7 @@ class GroupInvarianceConv(tf.keras.Model):
         super(GroupInvarianceConv, self).__init__()
 
         activation = tf.keras.activations.tanh
-        self.last_n = 64
+        self.last_n = 2#64
         self.features = [
             tf.keras.layers.Conv1D(32, 3, activation=activation),
             tf.keras.layers.Conv1D(4 * self.last_n, 1, padding='same'),
@@ -209,27 +209,27 @@ class ConvImg(tf.keras.Model):
         self.last_n = 128  # * 3
         self.features = [
             # tf.keras.layers.Conv2D(16, 3, activation=activation),
-            tf.keras.layers.Conv2D(8, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(4, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
             # tf.keras.layers.Conv2D(16, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(16, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(4, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
             # tf.keras.layers.Conv2D(32, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(16, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(4, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
             # tf.keras.layers.Conv2D(32, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(16, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(8, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
             # tf.keras.layers.Conv2D(64, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(32, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(8, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
             # tf.keras.layers.Conv2D(64, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(32, 3, padding='same', activation=activation),
+            tf.keras.layers.Conv2D(8, 3, padding='same', activation=activation),
             tf.keras.layers.MaxPool2D((2, 2), padding='same'),
         ]
         # self.fc = tf.keras.layers.Dense(num_features, activation=activation)
         self.fc = [
-            tf.keras.layers.Dense(64, activation=activation),
+            #tf.keras.layers.Dense(64, activation=activation),
             tf.keras.layers.Dense(16, activation=activation),
             tf.keras.layers.Dense(1),
         ]
@@ -248,8 +248,7 @@ class ConvImg(tf.keras.Model):
         return x
 
     def call(self, inputs, training=None):
-        x = groupAvereaging(inputs, self.process)
-        # x = self.process(inputs)
+        x = self.process(inputs)
         return x
 
 
