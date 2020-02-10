@@ -31,3 +31,5 @@ def if_collide(verts, query_points):
     inside = tf.logical_or(tf.reduce_all(cross > 0, -1), tf.reduce_all(cross < 0, -1))
     inside = tf.reduce_any(inside)
     return inside
+
+

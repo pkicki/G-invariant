@@ -5,6 +5,8 @@ import tensorflow as tf
 from matplotlib import pyplot as plt
 import numpy as np
 
+from utils.other import partitionfunc
+
 tf.enable_eager_execution()
 
 
@@ -163,106 +165,6 @@ class SimpleNet(tf.keras.Model):
         x = groupAvereaging(inputs, self.process)
         # x = self.process(inputs)
         return x
-
-
-class SegmentNet(tf.keras.Model):
-    def __init__(self, num_features):
-        super(SegmentNet, self).__init__()
-        activation = tf.keras.activations.tanh
-        self.features = [
-            tf.keras.layers.Dense(64, activation),
-            #tf.keras.layers.Dense(6 * num_features, activation),
-        ]
-
-        self.fc = [
-            tf.keras.layers.Dense(num_features, activation),
-            tf.keras.layers.Dense(1),
-        ]
-
-    def process(self, quad):
-        s1 = tf.concat([quad[:, 0], quad[:, 1]], axis=-1)
-        s2 = tf.concat([quad[:, 1], quad[:, 2]], axis=-1)
-        s3 = tf.concat([quad[:, 2], quad[:, 3]], axis=-1)
-        s4 = tf.concat([quad[:, 3], quad[:, 0]], axis=-1)
-
-        for layer in self.features:
-            s1 = layer(s1)
-            s2 = layer(s2)
-            s3 = layer(s3)
-            s4 = layer(s4)
-
-        x = s1 + s2 + s3 + s4
-        for layer in self.fc:
-            x = layer(x)
-        return x
-
-    def call(self, inputs, training=None):
-        # x = groupAvereaging(inputs, self.process)
-        x = self.process(inputs)
-        return x
-
-
-class ConvImg(tf.keras.Model):
-    def __init__(self, num_features):
-        super(ConvImg, self).__init__()
-        activation = tf.keras.activations.tanh
-        self.last_n = 128  # * 3
-        self.features = [
-            # tf.keras.layers.Conv2D(16, 3, activation=activation),
-            tf.keras.layers.Conv2D(4, 3, padding='same', activation=activation),
-            tf.keras.layers.MaxPool2D((2, 2), padding='same'),
-            # tf.keras.layers.Conv2D(16, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(4, 3, padding='same', activation=activation),
-            tf.keras.layers.MaxPool2D((2, 2), padding='same'),
-            # tf.keras.layers.Conv2D(32, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(4, 3, padding='same', activation=activation),
-            tf.keras.layers.MaxPool2D((2, 2), padding='same'),
-            # tf.keras.layers.Conv2D(32, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(8, 3, padding='same', activation=activation),
-            tf.keras.layers.MaxPool2D((2, 2), padding='same'),
-            # tf.keras.layers.Conv2D(64, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(8, 3, padding='same', activation=activation),
-            tf.keras.layers.MaxPool2D((2, 2), padding='same'),
-            # tf.keras.layers.Conv2D(64, 3, padding='same', activation=activation),
-            tf.keras.layers.Conv2D(8, 3, padding='same', activation=activation),
-            tf.keras.layers.MaxPool2D((2, 2), padding='same'),
-        ]
-        # self.fc = tf.keras.layers.Dense(num_features, activation=activation)
-        self.fc = [
-            #tf.keras.layers.Dense(64, activation=activation),
-            tf.keras.layers.Dense(16, activation=activation),
-            tf.keras.layers.Dense(1),
-        ]
-
-        self.f = tf.keras.layers.Flatten()
-
-    def process(self, quad):
-        x = quad
-        for layer in self.features:
-            x = layer(x)
-        x = self.f(x)
-
-        for layer in self.fc:
-            x = layer(x)
-
-        return x
-
-    def call(self, inputs, training=None):
-        x = self.process(inputs)
-        return x
-
-
-def partitionfunc(n, k, l=1):
-    '''n is the integer to partition, k is the length of partitions, l is the min partition element size'''
-    if k < 1:
-        raise StopIteration
-    if k == 1:
-        if n >= l:
-            yield (n,)
-        raise StopIteration
-    for i in range(l, n + 1):
-        for result in partitionfunc(n - i, k - 1, i):
-            yield (i,) + result
 
 
 class MulNet(tf.keras.Model):

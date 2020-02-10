@@ -5,7 +5,7 @@ import tensorflow.contrib as tfc
 
 
 class ExperimentHandler:
-
+    """ Author: Jakub Bednarek"""
     def __init__(self, working_path, out_name, log_interval, model, optimizer) -> None:
         super().__init__()
         train_log_path = os.path.join(working_path, out_name, 'logs', 'train')
@@ -47,6 +47,7 @@ class ExperimentHandler:
 
 
 class LoadFromFile(argparse.Action):
+    """ Author: Jakub Bednarek"""
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, 'unknownargs', list())
         with values as f:

@@ -82,6 +82,7 @@ class GroupInvarianceConv(tf.keras.Model):
         for layer in self.features:
             x = layer(x)
         # x =
+        x = tf.reshape(x, (bs, n_points, -1, 4))
         a, b, c, d = tf.unstack(x, axis=1)
         a = tf.reshape(a, (-1, 4, self.last_n))
         b = tf.reshape(b, (-1, 4, self.last_n))

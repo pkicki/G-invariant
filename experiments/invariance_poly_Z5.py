@@ -97,7 +97,7 @@ def main(args):
                     pred, L = pred
 
                 ## check model size
-                if True:
+                if False:
                     nw = 0
                     for layer in model.layers:
                         for l in layer.get_weights():
