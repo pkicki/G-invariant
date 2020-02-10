@@ -7,25 +7,17 @@ from time import time
 import numpy as np
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-from experiments.invariance_poly_A4 import poly_A4
-from experiments.invariance_poly_D8 import poly_D8
 from experiments.invariance_poly_S4 import poly_S4
-from experiments.invariance_poly_Z5 import poly_Z5
-from models.poly_S4 import GroupInvariance, SimpleNet, MessagePassing, Maron, Conv1d, GroupInvarianceConv
+from models.poly_S4 import GroupInvariance
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
 # add parent (root) to pythonpath
-from dataset import scenarios
-from argparse import ArgumentParser
 
 import tensorflow as tf
-import tensorflow.contrib as tfc
 from tqdm import tqdm
-
-from dl_work.utils import ExperimentHandler, LoadFromFile
 
 tf.enable_eager_execution()
 # tf.set_random_seed(444)

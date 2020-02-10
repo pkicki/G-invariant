@@ -3,8 +3,6 @@ import os
 import numpy as np
 import tensorflow as tf
 import matplotlib.image as mpimg
-from utils.utils import Pose2D
-from PIL import Image
 
 tf.enable_eager_execution()
 

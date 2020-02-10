@@ -22,8 +22,6 @@ import tensorflow as tf
 import tensorflow.contrib as tfc
 from tqdm import tqdm
 
-from dl_work.utils import LoadFromFile
-
 tf.enable_eager_execution()
 tf.set_random_seed(444)
 

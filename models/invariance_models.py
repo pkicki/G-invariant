@@ -1,13 +1,4 @@
-from math import pi
-
 import tensorflow as tf
-
-from dataset.scenarios import decode_data
-from utils.constants import Car
-from utils.crucial_points import calculate_car_crucial_points
-from utils.distances import dist, integral
-from utils.poly5 import curvature, params
-from utils.utils import _calculate_length, Rot
 from matplotlib import pyplot as plt
 
 tf.enable_eager_execution()

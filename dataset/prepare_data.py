@@ -7,7 +7,7 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from utils.distances import if_inside, if_collide
+from utils.geometry import if_inside, if_collide
 
 
 def invariance(path, id=0):

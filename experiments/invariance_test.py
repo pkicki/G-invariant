@@ -1,10 +1,9 @@
 import inspect
 import os
 import sys
-import numpy as np
 
 #os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-from models.invariance_models import InsideNet, SimpleNet
+from models.invariance_models import InsideNet
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
@@ -18,7 +17,7 @@ import tensorflow as tf
 import tensorflow.contrib as tfc
 from tqdm import tqdm
 
-from dl_work.utils import ExperimentHandler, LoadFromFile
+from utils.execution import ExperimentHandler, LoadFromFile
 
 tf.enable_eager_execution()
 tf.set_random_seed(444)

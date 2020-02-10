@@ -9,8 +9,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-from models.area7_small import GroupInvariance, SimpleNet, Conv1d, SegmentNet, GroupInvarianceConv, \
-    ConvImg
+from models.area7_small import ConvImg
 
 # add parent (root) to pythonpath
 from dataset import scenarios
@@ -20,7 +19,7 @@ import tensorflow as tf
 import tensorflow.contrib as tfc
 from tqdm import tqdm
 
-from dl_work.utils import ExperimentHandler, LoadFromFile
+from utils.execution import ExperimentHandler, LoadFromFile
 
 tf.enable_eager_execution()
 #tf.set_random_seed(444)

@@ -15,14 +15,9 @@ parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
 # add parent (root) to pythonpath
-from dataset import scenarios
-from argparse import ArgumentParser
 
 import tensorflow as tf
-import tensorflow.contrib as tfc
 from tqdm import tqdm
-
-from dl_work.utils import LoadFromFile
 
 tf.enable_eager_execution()
 tf.set_random_seed(444)
