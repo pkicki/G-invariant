@@ -58,6 +58,7 @@ def main():
     #path = "./working_dir/poly_D8/"
     #path = "./working_dir/poly_Z5/"
     path = "./working_dir/poly_S4/"
+    #path = "./working_dir/poly_A4/"
 
     models = [("my_inv_fc", GroupInvariance(n))]
     #models = [("my_inv_fc", GroupInvariance(n)), ("my_inv_conv", GroupInvarianceConv(n)), ("avg_fc", SimpleNet(n)),
