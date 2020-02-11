@@ -7,7 +7,7 @@ from time import time
 import numpy as np
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-from dataset.scenarios import area_dataset
+from dataset.scenarios import quadrangle_area_dataset
 from models import area4_nmid
 from models.area import GroupInvariance, GroupInvarianceConv
 from utils.permutation_groups import Z4
@@ -57,7 +57,7 @@ def secondary():
             fname = name + "_" + str(i)
             for ds_type in ["train", "val", "test"]:
             #for ds_type in ["train"]:
-                ds, ds_size = area_dataset(scenario_path.replace("train", ds_type), 4)
+                ds, ds_size = quadrangle_area_dataset(scenario_path.replace("train", ds_type))
                 mae = []
                 times = []
                 for k in range(1, 10):

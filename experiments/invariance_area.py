@@ -3,6 +3,8 @@ import os
 import sys
 import numpy as np
 
+from utils.permutation_groups import Z4
+
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
@@ -37,8 +39,8 @@ def _ds(title, ds, ds_size, i, batch_size):
 
 def main(args):
     # 1. Get datasets
-    train_ds, train_size = scenarios.area_dataset(args.scenario_path, 4)
-    val_ds, val_size = scenarios.area_dataset(args.scenario_path.replace("train", "val"), 4)
+    train_ds, train_size = scenarios.quadrangle_area_dataset(args.scenario_path)
+    val_ds, val_size = scenarios.quadrangle_area_dataset(args.scenario_path.replace("train", "val"))
 
     val_bs = args.batch_size
     val_ds = val_ds \
@@ -47,12 +49,11 @@ def main(args):
 
     # 2. Define model
 
-    perm = [[0, 1, 2, 3], [1, 2, 3, 0], [2, 3, 0, 1], [3, 0, 1, 2]]
     model = None
     if args.model == "FC_G-inv":
-        model = GroupInvariance(perm, args.n)
+        model = GroupInvariance(Z4, args.n)
     elif args.model == "Conv1D_G-inv":
-        model = GroupInvarianceConv(perm, args.n)
+        model = GroupInvarianceConv(Z4, args.n)
     elif args.model == "FC_G-avg":
         model = SimpleNet()
     elif args.model == "Conv1D_G-avg":

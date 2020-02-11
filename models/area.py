@@ -138,7 +138,8 @@ class Maron(tf.keras.Model):
 
         self.mulnn = MulNet()
 
-        self.a = list(set([p for x in partitionfunc(4, 8, l=0) for p in permutations(x)]))
+        self.a = list(set([p for x in partitionfunc(4, 4, l=0) for p in permutations(x)]))
+        self.a = [(x[:2] + (0, 0) + x[2:] + (0, 0)) for x in self.a]
         self.f = np.array(self.a)
 
     def call(self, x):

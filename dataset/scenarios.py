@@ -5,14 +5,14 @@ import tensorflow as tf
 tf.enable_eager_execution()
 
 
-def area_dataset(path, n):
+def quadrangle_area_dataset(path):
     def read_scn(scn_path):
         scn_path = os.path.join(path, scn_path)
         data = np.loadtxt(scn_path, delimiter='\t', dtype=np.float32)
-        x = data[:n]
-        y = data[n:2*n]
+        x = data[:4]
+        y = data[4:8]
         xy = tf.stack([x, y], -1)
-        area = data[2*n]
+        area = data[8]
         return xy, area
 
     scenarios = [read_scn(f) for f in sorted(os.listdir(path)) if f.endswith(".scn")]
