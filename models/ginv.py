@@ -13,8 +13,8 @@ def sigmaPi(fin, m, n, p):
 
 
 def prepare_permutation_matices(perm, n, m):
-    p1 = np.eye(n)
-    p = np.tile(np.eye(n)[np.newaxis], (m, 1, 1))
+    p1 = np.eye(n, dtype=np.float32)
+    p = np.tile(p1[np.newaxis], (m, 1, 1))
     for i, x in enumerate(perm):
         p[i, x, :] = p1[np.arange(n)]
     return p

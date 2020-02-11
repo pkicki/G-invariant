@@ -5,6 +5,9 @@ import tensorflow as tf
 from matplotlib import pyplot as plt
 import numpy as np
 
+from models.ginv import sigmaPi, prepare_permutation_matices
+from utils.permutation_groups import Z4
+
 tf.enable_eager_execution()
 
 
@@ -64,10 +67,10 @@ class GroupInvarianceConv(tf.keras.Model):
         super(GroupInvarianceConv, self).__init__()
 
         activation = tf.keras.activations.tanh
-        self.last_n = num_features
+        self.num_features = num_features
         self.features = [
             tf.keras.layers.Conv1D(32, 3, activation=activation),
-            tf.keras.layers.Conv1D(4 * self.last_n, 1, padding='same'),
+            tf.keras.layers.Conv1D(4 * self.num_features, 1, padding='same'),
         ]
         self.fc = [
             tf.keras.layers.Dense(32, activation=activation),
@@ -75,18 +78,28 @@ class GroupInvarianceConv(tf.keras.Model):
             tf.keras.layers.Dense(1),
         ]
 
+        perm = Z4
+        self.n = len(perm[0])
+        self.m = len(perm)
+        self.p = prepare_permutation_matices(perm, self.n, self.m)
+
     def call(self, inputs, training=None):
         x = tf.concat([inputs[:, -1:], inputs, inputs[:, :1]], axis=1)
         for layer in self.features:
             x = layer(x)
 
         a, b, c, d = tf.unstack(x, axis=1)
-        a = tf.reshape(a, (-1, 4, self.last_n))
-        b = tf.reshape(b, (-1, 4, self.last_n))
-        c = tf.reshape(c, (-1, 4, self.last_n))
-        d = tf.reshape(d, (-1, 4, self.last_n))
 
-        x = a[:, 0] * b[:, 1] * c[:, 2] * d[:, 3] \
+        x = tf.reshape(x, (-1, self.n, self.n, self.num_features))
+        x = tf.transpose(x, (0, 1, 3, 2))
+        x = sigmaPi(x, self.m, self.n, self.p)
+
+        a = tf.reshape(a, (-1, 4, self.num_features))
+        b = tf.reshape(b, (-1, 4, self.num_features))
+        c = tf.reshape(c, (-1, 4, self.num_features))
+        d = tf.reshape(d, (-1, 4, self.num_features))
+
+        y = a[:, 0] * b[:, 1] * c[:, 2] * d[:, 3] \
             + b[:, 0] * c[:, 1] * d[:, 2] * a[:, 3] \
             + c[:, 0] * d[:, 1] * a[:, 2] * b[:, 3] \
             + d[:, 0] * a[:, 1] * b[:, 2] * c[:, 3]

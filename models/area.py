@@ -61,7 +61,9 @@ class GroupInvarianceConv(tf.keras.Model):
     def call(self, x):
         x = tf.concat([x[:, -1:], x, x[:, :1]], axis=1)
         x = apply_layers(x, self.features)
-        x = tf.reshape(x, (-1, self.n, self.num_features, self.n))
+        #x = tf.reshape(x, (-1, self.n, self.num_features, self.n))
+        x = tf.reshape(x, (-1, self.n, self.n, self.num_features))  # for the compatibility with already trained models
+        x = tf.transpose(x, (0, 1, 3, 2))  # for the compatibility with already trained models
         x = sigmaPi(x, self.m, self.n, self.p)
         x = apply_layers(x, self.fc)
         return x
