@@ -28,3 +28,9 @@ def groupAvereaging(inputs, operation):
 
     x = tf.reduce_mean(tf.stack([x1, x2, x3, x4], -1), -1)
     return x
+
+
+def apply_layers(x, layers):
+    for l in layers:
+        x = l(x)
+    return x

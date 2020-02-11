@@ -83,7 +83,7 @@ def main(args):
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
                 L = 0.0
-                pred = model(quad, training=True)
+                pred = model(quad)
                 if len(pred) == 2:
                     pred, L = pred
 
@@ -130,7 +130,7 @@ def main(args):
         for i, quad, area in _ds('Validation', val_ds, val_size, epoch, val_bs):
             # 5.2.1 Make inference of the model for validation and calculate losses
             L = 0.0
-            pred = model(quad, training=True)
+            pred = model(quad)
             if len(pred) == 2:
                 pred, L = pred
 
@@ -142,7 +142,6 @@ def main(args):
             with tfc.summary.record_summaries_every_n_global_steps(args.log_interval, val_step):
                 tfc.summary.scalar('metrics/model_loss', model_loss, step=val_step)
 
-            # 5.2.4 Update meta variables
             val_step += 1
 
         epoch_accuracy = np.mean(acc)
