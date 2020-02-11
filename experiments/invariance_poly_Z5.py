@@ -4,12 +4,13 @@ import sys
 import numpy as np
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+from utils.permutation_groups import Z5
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-from models.poly_Z5 import MessagePassing
+from models.poly_Z5 import *
 # add parent (root) to pythonpath
 from argparse import ArgumentParser
 
@@ -57,13 +58,19 @@ def main(args):
     val_ds = np.random.rand(vs, args.batch_size, d)
 
     # 2. Define model
-    n = 32
-    #model = GroupInvariance(n)
-    #model = GroupInvarianceConv(n)
-    #model = SimpleNet(n)
-    #model = Conv1d(n)
-    model = MessagePassing(n)
-    #model = Maron(n)
+    model = None
+    if args.model == "FC_G-inv":
+        model = GroupInvariance(Z5, 2)
+    elif args.model == "Conv1D_G-inv":
+        model = GroupInvarianceConv(Z5, 2)
+    elif args.model == "FC_G-avg":
+        model = SimpleNet()
+    elif args.model == "Conv1D_G-avg":
+        model = Conv1d()
+    elif args.model == "Maron":
+        model = Maron()
+    else:
+        print("NO MODEL NAME PROVIDED!!!")
 
     # 3. Optimization
 
@@ -90,8 +97,7 @@ def main(args):
         for i in tqdm(range(ts), "Train"):
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
-                #pred, L = model(train_ds[i], training=True)
-                pred = model(train_ds[i], training=True)
+                pred = model(train_ds[i])
                 L = 0.
                 if len(pred) == 2:
                     pred, L = pred
@@ -150,8 +156,7 @@ def main(args):
         acc = []
         for i in tqdm(range(vs), "Val"):
             # 5.2.1 Make inference of the model for validation and calculate losses
-            #pred, L = model(val_ds[i], training=False)
-            pred = model(val_ds[i], training=False)
+            pred = model(val_ds[i])
             if len(pred) == 2:
                 pred, L = pred
 
@@ -175,18 +180,11 @@ def main(args):
         with open(args.working_path + "/" + args.out_name + "/" + model.name + ".csv", 'a') as fh:
             fh.write("VAL, %d, %.6f\n" % (epoch, epoch_accuracy))
 
-        # print(epoch_accuracy)
-        # break
 
         # 5.3 Save last and best
-        # if epoch_accuracy < best_accuracy:
-        #    experiment_handler.save_best()
-        #    best_accuracy = epoch_accuracy
-        # experiment_handler.save_last()
         if epoch_accuracy < best_accuracy:
             model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/best-" + str(epoch))
             best_accuracy = epoch_accuracy
-        # model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/last_n-" + str(epoch))
 
         experiment_handler.flush()
 
@@ -195,6 +193,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--config-file', action=LoadFromFile, type=open)
     parser.add_argument('--working-path', type=str, default='./working_dir')
+    parser.add_argument('--model', type=str)
     parser.add_argument('--num-epochs', type=int)
     parser.add_argument('--batch-size', type=int)
     parser.add_argument('--log-interval', type=int, default=5)

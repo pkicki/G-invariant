@@ -8,7 +8,6 @@ import numpy as np
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 from dataset.scenarios import quadrangle_area_dataset
-from models import area4_nmid
 from models.area import GroupInvariance, GroupInvarianceConv
 from utils.permutation_groups import Z4
 

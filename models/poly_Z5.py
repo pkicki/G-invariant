@@ -5,6 +5,9 @@ import tensorflow as tf
 from matplotlib import pyplot as plt
 import numpy as np
 
+from models.ginv import prepare_permutation_matices, sigmaPi
+from utils.other import apply_layers, partitionfunc
+
 tf.enable_eager_execution()
 
 
@@ -30,50 +33,32 @@ def groupAvereaging(inputs, operation):
 
 
 class GroupInvariance(tf.keras.Model):
-    def __init__(self, num_features, activation=tf.keras.activations.tanh):
+    def __init__(self, perm, num_features):
         super(GroupInvariance, self).__init__()
+        activation=tf.keras.activations.tanh
+
+        self.num_features = num_features
+        self.n = len(perm[0])
+        self.m = len(perm)
+        self.p = prepare_permutation_matices(perm, self.n, self.m)
+
         self.features = [
             tf.keras.layers.Dense(16, activation),
             tf.keras.layers.Dense(64, activation),
-            tf.keras.layers.Dense(5 * 2, tf.keras.activations.sigmoid),
-            # tf.keras.layers.Dense(5 * 64),
+            tf.keras.layers.Dense(self.n * self.num_features, tf.keras.activations.sigmoid),
         ]
 
         self.fc = [
-            # tf.keras.layers.Dense(num_features, activation),
-            tf.keras.layers.Dense(num_features, tf.keras.activations.relu, use_bias=False),
+            tf.keras.layers.Dense(32, tf.keras.activations.relu, use_bias=False),
             tf.keras.layers.Dense(1),
         ]
 
-        self.m = 5
-        n = 5
-        p1 = np.eye(n)
-        p = np.tile(np.eye(n)[np.newaxis], (self.m, 1, 1))
-
-        perm = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 0], [2, 3, 4, 0, 1], [3, 4, 0, 1, 2], [4, 0, 1, 2, 3]]
-
-        for i, x in enumerate(perm):
-            p[i, x, :] = p1[np.arange(n)]
-
-        self.p = p
-
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         x = inputs[:, :, tf.newaxis]
-        bs = x.shape[0]
-        n_points = x.shape[1]
-        for layer in self.features:
-            x = layer(x)
-        x = tf.reshape(x, (bs, n_points, -1, 5))
+        x = apply_layers(x, self.features)
+        x = tf.reshape(x, (-1, self.n, self.num_features, self.n))
 
-        fin = x
-        fin = np.transpose(fin, (0, 2, 1, 3))
-        fin = fin[:, :, np.newaxis]
-        fin = np.tile(fin, (1, 1, self.m, 1, 1))
-        y = fin @ self.p
-        y = y[:, :, :, np.arange(5), np.arange(5)]
-        y = np.prod(y, axis=3)
-        y = np.sum(y, axis=2)
-        x = y
+        x = sigmaPi(x, self.m, self.n, self.p)
 
         #a, b, c, d, e = tf.unstack(x, axis=1)
 
@@ -84,13 +69,12 @@ class GroupInvariance(tf.keras.Model):
         #    + c[:, :, 0] * d[:, :, 1] * e[:, :, 2] * a[:, :, 3] * b[:, :, 4] \
         #    + b[:, :, 0] * c[:, :, 1] * d[:, :, 2] * e[:, :, 3] * a[:, :, 4]
 
-        for layer in self.fc:
-            x = layer(x)
+        x = apply_layers(x, self.fc)
         return x
 
 
 class SimpleNet(tf.keras.Model):
-    def __init__(self, num_features):
+    def __init__(self):
         super(SimpleNet, self).__init__()
         activation = tf.keras.activations.tanh
         self.features = [
@@ -103,27 +87,27 @@ class SimpleNet(tf.keras.Model):
         ]
 
     def process(self, x):
-        for layer in self.features:
-            x = layer(x)
-
+        x = apply_layers(x, self.features)
         return x
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         x = groupAvereaging(inputs, self.process)
-        # x = self.process(inputs)
         return x
 
 
 class GroupInvarianceConv(tf.keras.Model):
-    def __init__(self, num_features, activation=tf.keras.activations.tanh):
+    def __init__(self, perm, num_features, activation=tf.keras.activations.tanh):
         super(GroupInvarianceConv, self).__init__()
-
         activation = tf.keras.activations.tanh
-        self.last_n = 2#116#128
+
+        self.num_features = num_features
+        self.n = len(perm[0])
+        self.m = len(perm)
+        self.p = prepare_permutation_matices(perm, self.n, self.m)
+
         self.features = [
             tf.keras.layers.Conv1D(32, 3, activation=activation),
-            tf.keras.layers.Conv1D(5 * self.last_n, 1, padding='same'),
-            #tf.keras.layers.Dense(5 * self.last_n),
+            tf.keras.layers.Conv1D(self.n * self.num_features, 1, padding='same'),
         ]
         self.fc = [
             tf.keras.layers.Dense(32, activation=activation),
@@ -131,76 +115,42 @@ class GroupInvarianceConv(tf.keras.Model):
             tf.keras.layers.Dense(1),
         ]
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         x = tf.concat([inputs[:, -1:], inputs, inputs[:, :1]], axis=1)[:, :, tf.newaxis]
-        bs = x.shape[0]
-        for layer in self.features:
-            x = layer(x)
-        x = tf.reshape(x, (bs, 5, 5, self.last_n))
-
-        a, b, c, d, e = tf.unstack(x, axis=1)
-
-        x = a[:, 0] * b[:, 1] * c[:, 2] * d[:, 3] * e[:, 4] \
-            + b[:, 0] * c[:, 1] * d[:, 2] * e[:, 3] * a[:, 4] \
-            + c[:, 0] * d[:, 1] * e[:, 2] * a[:, 3] * b[:, 4] \
-            + d[:, 0] * e[:, 1] * a[:, 2] * b[:, 3] * c[:, 4] \
-            + e[:, 0] * a[:, 1] * b[:, 2] * c[:, 3] * d[:, 4]
-
-        for layer in self.fc:
-            x = layer(x)
-
+        x = apply_layers(x, self.features)
+        x = tf.reshape(x, (-1, self.n, self.n, self.num_features))
+        x = tf.transpose(x, (0, 1, 3, 2))  # for the compatibility with already trained models
+        x = sigmaPi(x, self.m, self.n, self.p)
+        x = apply_layers(x, self.fc)
         return x
 
 
 class Conv1d(tf.keras.Model):
-    def __init__(self, num_features):
+    def __init__(self):
         super(Conv1d, self).__init__()
         activation = tf.keras.activations.tanh
-        self.last_n = 3  # 128
+        self.last_n = 3
         self.features = [
             tf.keras.layers.Conv1D(32, 3, activation=activation),
             tf.keras.layers.Conv1D(self.last_n, 1, activation=activation),
         ]
-        # self.fc = tf.keras.layers.Dense(num_features, activation=activation)
         self.fc = [
             tf.keras.layers.Dense(32, activation=activation),
             tf.keras.layers.Dense(32, activation=activation),
             tf.keras.layers.Dense(1),
         ]
 
-    def process(self, quad):
-        x = quad
+    def process(self, x):
         bs = x.shape[0]
-        # x = tf.reshape(quad, (-1, 8))
-        x = tf.concat([quad[:, -1:], quad, quad[:, :1]], axis=1)[:, :, tf.newaxis]
-        for layer in self.features:
-            x = layer(x)
+        x = tf.concat([x[:, -1:], x, x[:, :1]], axis=1)[:, :, tf.newaxis]
+        x = apply_layers(x, self.features)
         x = tf.reshape(x, (bs, -1))
-        # x = self.fc(x)
-        for layer in self.fc:
-            x = layer(x)
-
+        x = apply_layers(x, self.fc)
         return x
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         x = groupAvereaging(inputs, self.process)
-        # x = self.process(inputs)
         return x
-
-
-
-
-def partitionfunc(n, k, l=1):
-    '''n is the integer to partition, k is the length of partitions, l is the min partition element size'''
-    if k < 1:
-        raise StopIteration
-    if k == 1:
-        if n >= l:
-            yield (n,)
-        raise StopIteration
-    for i in range(l, n + 1):
-        for result in partitionfunc(n - i, k - 1, i):
-            yield (i,) + result
 
 
 class MulNet(tf.keras.Model):
@@ -214,24 +164,17 @@ class MulNet(tf.keras.Model):
         ]
 
     def call(self, x):
-        for l in self.fc:
-            x = l(x)
+        x = apply_layers(x, self.fc)
         return x
 
 
 class Maron(tf.keras.Model):
-    def __init__(self, num_features, activation=tf.keras.activations.tanh):
+    def __init__(self):
         super(Maron, self).__init__()
-
-        #self.w = tf.Variable(tf.random.normal([84]), dtype=tf.float32, trainable=True)
+        activation = tf.keras.activations.tanh
 
         self.features = [
             tf.keras.layers.Dense(14, activation),
-            #tf.keras.layers.Dense(48, activation),
-            # tf.keras.layers.Dense(2048, activation),
-            #tf.keras.layers.Dense(6 * num_features, activation),
-            # tf.keras.layers.Dense(1024, activation),
-            # tf.keras.layers.Dense(16, activation),
             tf.keras.layers.Dense(1),
         ]
 
@@ -241,7 +184,7 @@ class Maron(tf.keras.Model):
         self.a = list(set([p for x in partitionfunc(5, 5, l=0) for p in permutations(x)]))
         self.f = np.array(self.a)
 
-    def call(self, x, training=None):
+    def call(self, x):
         def inv(a, b, c, d, e):
             p = self.f
             x1 = a ** p[:, 0]
@@ -269,7 +212,6 @@ class Maron(tf.keras.Model):
 
         x, L = term()
 
-        for layer in self.features:
-            x = layer(x)
+        x = apply_layers(x, self.features)
 
         return x, L
