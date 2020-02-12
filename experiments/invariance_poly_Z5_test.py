@@ -86,7 +86,7 @@ def main():
             results.append((base_name, ds_name, np.mean(mae), np.std(mae), np.mean(times[1:]), np.std(times[1:])))
             print(base_name, ds_name, np.mean(mae), np.std(mae), np.mean(times[1:]), np.std(times[1:]))
 
-    with open("./paper/poly_test.csv", 'w') as fh:
+    with open("./paper/poly.csv", 'w') as fh:
         for r in results:
             fh.write("%s\t%s\t%.5f\t%.5f\t%.6f\t%.6f\n" % r)
 

@@ -45,14 +45,15 @@ def main():
     dss = [("train", train_ds), ("test", test_ds)]
 
     # 2. Define model
-    models = [("./working_dir/poly_Z5/", GroupInvariance(Z5, 2), poly_Z5),
-              ("./working_dir/poly_D8/", GroupInvariance(D8, 2), poly_D8),
-              ("./working_dir/poly_A4/", GroupInvariance(A4, 2), poly_A4),
-              ("./working_dir/poly_S4/", GroupInvariance(S4, 2), poly_S4)]
+    models = [("Z5", GroupInvariance(Z5, 2), poly_Z5),
+              ("D8", GroupInvariance(D8, 2), poly_D8),
+              ("A4", GroupInvariance(A4, 2), poly_A4),
+              ("S4", GroupInvariance(S4, 2), poly_S4)]
     base_name = "my_inv_fc"
 
     results = []
-    for path, model, poly in models:
+    for name, model, poly in models:
+        path = "./paper/poly_" + name + "/"
         for ds_name, ds in dss:
             mae = []
             mape = []
@@ -81,12 +82,12 @@ def main():
                 print(np.mean(acc))
                 mae.append(np.mean(acc))
                 mape.append(np.mean(per))
-            results.append((base_name, ds_name, np.mean(mape), np.std(mape), np.mean(times[1:]), np.std(times[1:])))
-            print(base_name, ds_name, np.mean(mae), np.std(mae), np.mean(mape), np.std(mape))
+            results.append((name, ds_name, np.mean(mape), np.std(mape), np.mean(times[1:]), np.std(times[1:])))
+            print(name, ds_name, np.mean(mae), np.std(mae), np.mean(mape), np.std(mape))
             print(np.mean(times[1:]))
             print(np.std(times[1:]))
 
-    with open("./paper/poly_m_test.csv", 'w') as fh:
+    with open("./paper/poly_m.csv", 'w') as fh:
         for r in results:
             fh.write("%s\t%s\t%.5f\t%.5f\t%.6f\t%.6f\n" % r)
 

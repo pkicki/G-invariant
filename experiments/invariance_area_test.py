@@ -54,7 +54,7 @@ def secondary():
             scenario_path = "../../data_inv/train/area4paper_shift"
             ds, ds_size = scenarios.quadrangle_area_dataset(scenario_path.replace("train", ds_type))
             model = models[i]
-            path = "./working_dir/area4"
+            path = "./paper/area4"
             mae = []
             times = []
             for k in range(1, 10):
@@ -84,7 +84,7 @@ def secondary():
             print(np.mean(mae))
             print(np.std(mae))
             results.append((name, ds_type, np.mean(mae), np.std(mae), np.mean(times), np.std(times)))
-    with open("./paper/area4_times_test.csv", 'w') as fh:
+    with open("./paper/area4.csv", 'w') as fh:
         for r in results:
             fh.write("%s\t%s\t%.5f\t%.5f\t%.6f\t%.6f\n" % r)
 

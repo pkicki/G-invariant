@@ -25,7 +25,7 @@ names = ["Z3", "S3", "S3xS2"]
 plot_names = [r"$\mathbb{Z}_3$", r"$S_3$", r"$S_3 \times S_2$"]
 #path = "./paper/poly/"
 #path = "./working_dir/poly_GH_tr160/"
-path = "./working_dir/poly_GH_2d/"
+path = "./paper/poly_GH/"
 for k, base_name in enumerate(names):
     seq = []
     for i in range(1, 11):

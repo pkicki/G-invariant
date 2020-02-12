@@ -84,7 +84,7 @@ def secondary():
                 print(np.std(mae))
                 results.append((fname, ds_type, np.mean(mae), np.std(mae), np.mean(times[1:]), np.std(times[1:])))
 
-    with open("./paper/area_nmid_test.csv", 'w') as fh:
+    with open("./paper/area_nmid.csv", 'w') as fh:
         for r in results:
             fh.write("%s\t%s\t%.5f\t%.5f\t%.6f\t%.6f\n" % r)
 
