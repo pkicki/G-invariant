@@ -78,11 +78,9 @@ class SimpleNet(tf.keras.Model):
         super(SimpleNet, self).__init__()
         activation = tf.keras.activations.tanh
         self.features = [
-            tf.keras.layers.Dense(48, activation),
-            # tf.keras.layers.Dense(2048, activation),
+            tf.keras.layers.Dense(89, activation),
+            tf.keras.layers.Dense(6 * 32, activation),
             tf.keras.layers.Dense(32, activation),
-            # tf.keras.layers.Dense(1024, activation),
-            # tf.keras.layers.Dense(16, activation),
             tf.keras.layers.Dense(1),
         ]
 
@@ -129,7 +127,7 @@ class Conv1d(tf.keras.Model):
     def __init__(self):
         super(Conv1d, self).__init__()
         activation = tf.keras.activations.tanh
-        self.last_n = 3
+        self.last_n = 118
         self.features = [
             tf.keras.layers.Conv1D(32, 3, activation=activation),
             tf.keras.layers.Conv1D(self.last_n, 1, activation=activation),
@@ -159,7 +157,8 @@ class MulNet(tf.keras.Model):
         activation = tf.keras.activations.tanh
 
         self.fc = [
-            tf.keras.layers.Dense(16, activation),
+            tf.keras.layers.Dense(64, activation),
+            tf.keras.layers.Dense(32, activation),
             tf.keras.layers.Dense(1),
         ]
 
@@ -174,7 +173,9 @@ class Maron(tf.keras.Model):
         activation = tf.keras.activations.tanh
 
         self.features = [
-            tf.keras.layers.Dense(14, activation),
+            tf.keras.layers.Dense(48, activation),
+            tf.keras.layers.Dense(192, activation),
+            tf.keras.layers.Dense(32, activation),
             tf.keras.layers.Dense(1),
         ]
 

@@ -4,14 +4,14 @@ import sys
 import numpy as np
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-from utils.permutation_groups import Z5
-from utils.polynomials import poly_Z5
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-from models.poly_Z5 import *
+from utils.polynomials import *
+from utils.permutation_groups import *
+from models.poly_Z5 import GroupInvariance
 # add parent (root) to pythonpath
 from argparse import ArgumentParser
 
@@ -42,27 +42,45 @@ def main(args):
     # 1. Get datasets
     ts = int(1e0)
     vs = int(3e1)
-    train_size = int(args.batch_size * ts)
-    val_size = int(args.batch_size * vs)
 
     d = 5
     train_ds = np.random.rand(ts, args.batch_size, d)
     val_ds = np.random.rand(vs, args.batch_size, d)
 
-    # 2. Define model
-    model = None
-    if args.model == "FC_G-inv":
-        model = GroupInvariance(Z5, 64)
-    elif args.model == "Conv1D_G-inv":
-        model = GroupInvarianceConv(Z5, 116)
-    elif args.model == "FC_G-avg":
-        model = SimpleNet()
-    elif args.model == "Conv1D_G-avg":
-        model = Conv1d()
-    elif args.model == "Maron":
-        model = Maron()
+    perm = None
+    if args.group == "Z5":
+        perm = Z5
+    elif args.group == "D8":
+        perm = D8
+    elif args.group == "A4":
+        perm = A4
+    elif args.group == "S4":
+        perm = S4
+    elif args.group == "S3":
+        perm = S3
     else:
-        print("NO MODEL NAME PROVIDED!!!")
+        print("UNDEFINED GROUP")
+
+    poly = None
+    if args.poly == "Z5":
+        poly = poly_Z5
+    elif args.poly == "D8":
+        poly = poly_D8
+    elif args.poly == "A4":
+        poly = poly_A4
+    elif args.poly == "S4":
+        poly = poly_S4
+    elif args.poly == "S3":
+        poly = poly_S3
+    elif args.poly == "Z3":
+        poly = poly_Z3
+    elif args.poly == "S3xS2":
+        poly = poly_S3xS2
+    else:
+        print("UNDEFINED GROUP")
+
+    # 2. Define model
+    model = GroupInvariance(perm, 2)
 
     # 3. Optimization
     optimizer = tf.train.AdamOptimizer(args.eta)
@@ -96,7 +114,7 @@ def main(args):
                             nw += a
                     print(nw)
 
-                y = poly_Z5(train_ds[i])
+                y = poly(train_ds[i])
                 model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
                 total_loss = model_loss + L
 
@@ -133,7 +151,7 @@ def main(args):
             if len(pred) == 2:
                 pred, L = pred
 
-            y = poly_Z5(val_ds[i])
+            y = poly(val_ds[i])
             model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
 
             acc = acc + list(model_loss.numpy())
@@ -153,7 +171,6 @@ def main(args):
         with open(args.working_path + "/" + args.out_name + "/" + model.name + ".csv", 'a') as fh:
             fh.write("VAL, %d, %.6f\n" % (epoch, epoch_accuracy))
 
-
         # 5.3 Save last and best
         if epoch_accuracy < best_accuracy:
             model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/best-" + str(epoch))
@@ -166,7 +183,8 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--config-file', action=LoadFromFile, type=open)
     parser.add_argument('--working-path', type=str, default='./working_dir')
-    parser.add_argument('--model', type=str)
+    parser.add_argument('--poly', type=str)
+    parser.add_argument('--group', type=str)
     parser.add_argument('--num-epochs', type=int)
     parser.add_argument('--batch-size', type=int)
     parser.add_argument('--log-interval', type=int, default=5)
