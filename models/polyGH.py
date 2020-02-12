@@ -5,6 +5,9 @@ import tensorflow as tf
 from matplotlib import pyplot as plt
 import numpy as np
 
+from models.ginv import sigmaPi, prepare_permutation_matices
+from utils.permutation_groups import S3
+
 tf.enable_eager_execution()
 
 
@@ -45,6 +48,10 @@ class GroupInvariance(tf.keras.Model):
             tf.keras.layers.Dense(1),
         ]
 
+        self.m = 6
+        self.n = 5
+        self.p = prepare_permutation_matices(S3, self.n, self.m)
+
     def call(self, inputs, training=None):
         x = inputs[:, :, tf.newaxis]
         bs = x.shape[0]
@@ -53,6 +60,8 @@ class GroupInvariance(tf.keras.Model):
             x = layer(x)
         x = tf.reshape(x, (bs, n_points, -1, 5))
         a, b, c, d, e = tf.unstack(x, axis=1)
+
+        y = sigmaPi(x, self.m, self.n, self.p)
 
         # Z4 in S5
         #x = a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \

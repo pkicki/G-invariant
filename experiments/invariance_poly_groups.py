@@ -40,7 +40,8 @@ def _ds(title, ds, ds_size, i, batch_size):
 
 def main(args):
     # 1. Get datasets
-    ts = int(1e0)
+    #ts = int(1e0)
+    ts = int(args.ts)
     vs = int(3e1)
 
     d = 5
@@ -84,6 +85,7 @@ def main(args):
 
     # 3. Optimization
     optimizer = tf.train.AdamOptimizer(args.eta)
+    l2_reg = tf.keras.regularizers.l2(1e-5)
 
     # 4. Restore, Log & Save
     experiment_handler = ExperimentHandler(args.working_path, args.out_name, args.log_interval, model, optimizer)
@@ -104,7 +106,7 @@ def main(args):
                     pred, L = pred
 
                 ## check model size
-                if True:
+                if False:
                     nw = 0
                     for layer in model.layers:
                         for l in layer.get_weights():
@@ -116,6 +118,7 @@ def main(args):
 
                 y = poly(train_ds[i])
                 model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
+                reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
                 total_loss = model_loss + L
 
             # 5.1.2 Take gradients (if necessary apply regularization like clipping),
@@ -186,6 +189,7 @@ if __name__ == '__main__':
     parser.add_argument('--poly', type=str)
     parser.add_argument('--group', type=str)
     parser.add_argument('--n', type=int)
+    parser.add_argument('--ts', type=int)
     parser.add_argument('--num-epochs', type=int)
     parser.add_argument('--batch-size', type=int)
     parser.add_argument('--log-interval', type=int, default=5)

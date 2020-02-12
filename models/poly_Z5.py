@@ -46,9 +46,11 @@ class GroupInvariance(tf.keras.Model):
             tf.keras.layers.Dense(16, activation),
             tf.keras.layers.Dense(64, activation),
             tf.keras.layers.Dense(self.n * self.num_features, tf.keras.activations.sigmoid),
+            #tf.keras.layers.Dense(self.n * self.num_features, None),
         ]
 
         self.fc = [
+            #tf.keras.layers.Dense(32, tf.keras.activations.tanh),
             tf.keras.layers.Dense(32, tf.keras.activations.relu, use_bias=False),
             tf.keras.layers.Dense(1),
         ]
@@ -58,7 +60,9 @@ class GroupInvariance(tf.keras.Model):
         x = apply_layers(x, self.features)
         x = tf.reshape(x, (-1, self.n, self.num_features, self.n))
 
-        x = sigmaPi(x, self.m, self.n, self.p)
+        a, b, c, d, e = tf.unstack(x, axis=1)
+
+        y = sigmaPi(x, self.m, self.n, self.p)
 
         #a, b, c, d, e = tf.unstack(x, axis=1)
 
@@ -68,6 +72,15 @@ class GroupInvariance(tf.keras.Model):
         #    + d[:, :, 0] * e[:, :, 1] * a[:, :, 2] * b[:, :, 3] * c[:, :, 4] \
         #    + c[:, :, 0] * d[:, :, 1] * e[:, :, 2] * a[:, :, 3] * b[:, :, 4] \
         #    + b[:, :, 0] * c[:, :, 1] * d[:, :, 2] * e[:, :, 3] * a[:, :, 4]
+
+
+        # S3 in S5
+        x = a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + a[:, :, 0] * c[:, :, 1] * b[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + b[:, :, 0] * a[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + b[:, :, 0] * c[:, :, 1] * a[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + c[:, :, 0] * a[:, :, 1] * b[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + c[:, :, 0] * b[:, :, 1] * a[:, :, 2] * d[:, :, 3] * e[:, :, 4]
 
         x = apply_layers(x, self.fc)
         return x
