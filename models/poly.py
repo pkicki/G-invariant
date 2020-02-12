@@ -59,29 +59,7 @@ class GroupInvariance(tf.keras.Model):
         x = inputs[:, :, tf.newaxis]
         x = apply_layers(x, self.features)
         x = tf.reshape(x, (-1, self.n, self.num_features, self.n))
-
-        a, b, c, d, e = tf.unstack(x, axis=1)
-
-        y = sigmaPi(x, self.m, self.n, self.p)
-
-        #a, b, c, d, e = tf.unstack(x, axis=1)
-
-        # Z5 in S5
-        #x = a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-        #    + e[:, :, 0] * a[:, :, 1] * b[:, :, 2] * c[:, :, 3] * d[:, :, 4] \
-        #    + d[:, :, 0] * e[:, :, 1] * a[:, :, 2] * b[:, :, 3] * c[:, :, 4] \
-        #    + c[:, :, 0] * d[:, :, 1] * e[:, :, 2] * a[:, :, 3] * b[:, :, 4] \
-        #    + b[:, :, 0] * c[:, :, 1] * d[:, :, 2] * e[:, :, 3] * a[:, :, 4]
-
-
-        # S3 in S5
-        x = a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-            + a[:, :, 0] * c[:, :, 1] * b[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-            + b[:, :, 0] * a[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-            + b[:, :, 0] * c[:, :, 1] * a[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-            + c[:, :, 0] * a[:, :, 1] * b[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-            + c[:, :, 0] * b[:, :, 1] * a[:, :, 2] * d[:, :, 3] * e[:, :, 4]
-
+        x = sigmaPi(x, self.m, self.n, self.p)
         x = apply_layers(x, self.fc)
         return x
 
