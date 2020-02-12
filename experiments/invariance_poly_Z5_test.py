@@ -8,7 +8,7 @@ import numpy as np
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 from experiments.invariance_poly_Z5 import poly_Z5
-from models.poly_Z5 import *
+from models.poly import *
 from utils.permutation_groups import Z5
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))

@@ -11,7 +11,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-from models.poly_Z5 import *
+from models.poly import *
 # add parent (root) to pythonpath
 from argparse import ArgumentParser
 
@@ -66,6 +66,7 @@ def main(args):
 
     # 3. Optimization
     optimizer = tf.train.AdamOptimizer(args.eta)
+    l2_reg = tf.keras.regularizers.l2(1e-5)
 
     # 4. Restore, Log & Save
     experiment_handler = ExperimentHandler(args.working_path, args.out_name, args.log_interval, model, optimizer)
@@ -98,6 +99,7 @@ def main(args):
 
                 y = poly_Z5(train_ds[i])
                 model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
+                reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
                 total_loss = model_loss + L
 
             # 5.1.2 Take gradients (if necessary apply regularization like clipping),

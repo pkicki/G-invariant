@@ -11,7 +11,7 @@ sys.path.insert(0, parentdir)
 
 from utils.polynomials import *
 from utils.permutation_groups import *
-from models.poly_Z5 import GroupInvariance
+from models.poly import GroupInvariance
 # add parent (root) to pythonpath
 from argparse import ArgumentParser
 
@@ -97,6 +97,7 @@ def main(args):
         # 5.1. Training Loop
         experiment_handler.log_training()
         acc = []
+        per = []
         for i in tqdm(range(ts), "Train"):
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
@@ -118,6 +119,7 @@ def main(args):
 
                 y = poly(train_ds[i])
                 model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
+                percent = model_loss / y
                 reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
                 total_loss = model_loss + L
 
@@ -128,6 +130,7 @@ def main(args):
                                       global_step=tf.train.get_or_create_global_step())
 
             acc = acc + list(model_loss.numpy())
+            per = per + list(percent.numpy())
 
             # 5.1.4 Save logs for particular interval
             with tfc.summary.record_summaries_every_n_global_steps(args.log_interval, train_step):
@@ -142,12 +145,14 @@ def main(args):
 
         with open(args.working_path + "/" + args.out_name + "/" + model.name + ".csv", 'a') as fh:
             fh.write("TRAIN, %d, %.6f\n" % (epoch, np.mean(acc)))
+            fh.write("TRAIN, %d, %.6f\n" % (epoch, np.mean(per)))
 
         #    accuracy.result()
 
         # 5.2. Validation Loop
         experiment_handler.log_validation()
         acc = []
+        per = []
         for i in tqdm(range(vs), "Val"):
             # 5.2.1 Make inference of the model for validation and calculate losses
             pred = model(val_ds[i])
@@ -156,8 +161,10 @@ def main(args):
 
             y = poly(val_ds[i])
             model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
+            percent = model_loss / y
 
             acc = acc + list(model_loss.numpy())
+            per = per + list(percent.numpy())
 
             # 5.2.3 Print logs for particular interval
             with tfc.summary.record_summaries_every_n_global_steps(args.log_interval, val_step):
@@ -173,6 +180,7 @@ def main(args):
 
         with open(args.working_path + "/" + args.out_name + "/" + model.name + ".csv", 'a') as fh:
             fh.write("VAL, %d, %.6f\n" % (epoch, epoch_accuracy))
+            fh.write("VAL, %d, %.6f\n" % (epoch, np.mean(per)))
 
         # 5.3 Save last and best
         if epoch_accuracy < best_accuracy:

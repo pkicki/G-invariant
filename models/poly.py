@@ -5,6 +5,9 @@ import tensorflow as tf
 from matplotlib import pyplot as plt
 import numpy as np
 
+from models.ginv import prepare_permutation_matices, sigmaPi
+from utils.other import apply_layers, partitionfunc
+
 tf.enable_eager_execution()
 
 
@@ -30,184 +33,135 @@ def groupAvereaging(inputs, operation):
 
 
 class GroupInvariance(tf.keras.Model):
-    def __init__(self, num_features, activation=tf.keras.activations.tanh):
+    def __init__(self, perm, num_features):
         super(GroupInvariance, self).__init__()
+        activation=tf.keras.activations.tanh
+
+        self.num_features = num_features
+        self.n = len(perm[0])
+        self.m = len(perm)
+        self.p = prepare_permutation_matices(perm, self.n, self.m)
+
         self.features = [
             tf.keras.layers.Dense(16, activation),
             tf.keras.layers.Dense(64, activation),
-            tf.keras.layers.Dense(5 * 64, tf.keras.activations.sigmoid),
-            # tf.keras.layers.Dense(5 * 64),
+            tf.keras.layers.Dense(self.n * self.num_features, tf.keras.activations.sigmoid),
+            #tf.keras.layers.Dense(self.n * self.num_features, None),
         ]
 
         self.fc = [
-            # tf.keras.layers.Dense(num_features, activation),
-            tf.keras.layers.Dense(num_features, tf.keras.activations.relu, use_bias=False),
+            #tf.keras.layers.Dense(32, tf.keras.activations.tanh),
+            tf.keras.layers.Dense(32, tf.keras.activations.relu, use_bias=False),
             tf.keras.layers.Dense(1),
         ]
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         x = inputs[:, :, tf.newaxis]
-        bs = x.shape[0]
-        n_points = x.shape[1]
-        for layer in self.features:
-            x = layer(x)
-        x = tf.reshape(x, (bs, n_points, -1, 5))
+        x = apply_layers(x, self.features)
+        x = tf.reshape(x, (-1, self.n, self.num_features, self.n))
+
         a, b, c, d, e = tf.unstack(x, axis=1)
+
+        y = sigmaPi(x, self.m, self.n, self.p)
+
+        #a, b, c, d, e = tf.unstack(x, axis=1)
+
         # Z5 in S5
+        #x = a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+        #    + e[:, :, 0] * a[:, :, 1] * b[:, :, 2] * c[:, :, 3] * d[:, :, 4] \
+        #    + d[:, :, 0] * e[:, :, 1] * a[:, :, 2] * b[:, :, 3] * c[:, :, 4] \
+        #    + c[:, :, 0] * d[:, :, 1] * e[:, :, 2] * a[:, :, 3] * b[:, :, 4] \
+        #    + b[:, :, 0] * c[:, :, 1] * d[:, :, 2] * e[:, :, 3] * a[:, :, 4]
+
+
+        # S3 in S5
         x = a[:, :, 0] * b[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
-            + e[:, :, 0] * a[:, :, 1] * b[:, :, 2] * c[:, :, 3] * d[:, :, 4] \
-            + d[:, :, 0] * e[:, :, 1] * a[:, :, 2] * b[:, :, 3] * c[:, :, 4] \
-            + c[:, :, 0] * d[:, :, 1] * e[:, :, 2] * a[:, :, 3] * b[:, :, 4] \
-            + b[:, :, 0] * c[:, :, 1] * d[:, :, 2] * e[:, :, 3] * a[:, :, 4]
+            + a[:, :, 0] * c[:, :, 1] * b[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + b[:, :, 0] * a[:, :, 1] * c[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + b[:, :, 0] * c[:, :, 1] * a[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + c[:, :, 0] * a[:, :, 1] * b[:, :, 2] * d[:, :, 3] * e[:, :, 4] \
+            + c[:, :, 0] * b[:, :, 1] * a[:, :, 2] * d[:, :, 3] * e[:, :, 4]
 
-        for layer in self.fc:
-            x = layer(x)
-        # x = tf.reduce_sum(x, 1, keep_dims=True)
-
+        x = apply_layers(x, self.fc)
         return x
 
 
 class SimpleNet(tf.keras.Model):
-    def __init__(self, num_features):
+    def __init__(self):
         super(SimpleNet, self).__init__()
         activation = tf.keras.activations.tanh
         self.features = [
             tf.keras.layers.Dense(89, activation),
-            # tf.keras.layers.Dense(2048, activation),
-            tf.keras.layers.Dense(6 * num_features, activation),
-            tf.keras.layers.Dense(num_features, activation),
-            # tf.keras.layers.Dense(1024, activation),
-            # tf.keras.layers.Dense(16, activation),
+            tf.keras.layers.Dense(6 * 32, activation),
+            tf.keras.layers.Dense(32, activation),
             tf.keras.layers.Dense(1),
         ]
 
     def process(self, x):
-        for layer in self.features:
-            x = layer(x)
-
+        x = apply_layers(x, self.features)
         return x
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         x = groupAvereaging(inputs, self.process)
-        # x = self.process(inputs)
         return x
 
 
 class GroupInvarianceConv(tf.keras.Model):
-    def __init__(self, num_features, activation=tf.keras.activations.tanh):
+    def __init__(self, perm, num_features, activation=tf.keras.activations.tanh):
         super(GroupInvarianceConv, self).__init__()
-
         activation = tf.keras.activations.tanh
-        self.last_n = 116#128
-        self.conv = tf.keras.layers.Conv1D(32, 3, activation=activation)
-        self.e = tf.keras.layers.Dense(32, activation=activation)
+
+        self.num_features = num_features
+        self.n = len(perm[0])
+        self.m = len(perm)
+        self.p = prepare_permutation_matices(perm, self.n, self.m)
+
         self.features = [
-            #tf.keras.layers.Conv1D(32, 3, activation=activation),
-            #tf.keras.layers.Conv1D(5 * self.last_n, 1, padding='same'),
-            tf.keras.layers.Dense(5 * self.last_n),
+            tf.keras.layers.Conv1D(32, 3, activation=activation),
+            tf.keras.layers.Conv1D(self.n * self.num_features, 1, padding='same'),
         ]
         self.fc = [
             tf.keras.layers.Dense(32, activation=activation),
-            tf.keras.layers.Dense(num_features, activation=activation),
+            tf.keras.layers.Dense(32, activation=activation),
             tf.keras.layers.Dense(1),
         ]
 
-    def call(self, inputs, training=None):
-        x = inputs
-        inputs = x[:, :-1]
-        e = x[:, -1:, tf.newaxis]
+    def call(self, inputs):
         x = tf.concat([inputs[:, -1:], inputs, inputs[:, :1]], axis=1)[:, :, tf.newaxis]
-        bs = x.shape[0]
-        x = self.conv(x)
-        e = self.e(e)
-        x = tf.concat([x, e], axis=1)
-        for layer in self.features:
-            x = layer(x)
-        x = tf.reshape(x, (bs, 5, 5, self.last_n))
-        a, b, c, d, e = tf.unstack(x, axis=1)
-        #a = tf.reshape(a, (-1, 5, self.last_n))
-        #b = tf.reshape(b, (-1, 5, self.last_n))
-        #c = tf.reshape(c, (-1, 5, self.last_n))
-        #d = tf.reshape(d, (-1, 5, self.last_n))
-        #e = tf.reshape(e, (-1, 5, self.last_n))
-
-        #x = a[:, 0] * b[:, 1] * c[:, 2] * d[:, 3] * e[:, 4] \
-        #    + b[:, 0] * c[:, 1] * d[:, 2] * e[:, 3] * a[:, 4] \
-        #    + c[:, 0] * d[:, 1] * e[:, 2] * a[:, 3] * b[:, 4] \
-        #    + d[:, 0] * e[:, 1] * a[:, 2] * b[:, 3] * c[:, 4] \
-        #    + e[:, 0] * a[:, 1] * b[:, 2] * c[:, 3] * d[:, 4]
-
-        # D8 in S5
-        x = a[:, 0] * b[:, 1] * c[:, 2] * d[:, 3] * e[:, 4] \
-            + d[:, 0] * a[:, 1] * b[:, 2] * c[:, 3] * e[:, 4] \
-            + c[:, 0] * d[:, 1] * a[:, 2] * b[:, 3] * e[:, 4] \
-            + b[:, 0] * c[:, 1] * d[:, 2] * a[:, 3] * e[:, 4] \
-            + d[:, 0] * c[:, 1] * b[:, 2] * a[:, 3] * e[:, 4] \
-            + c[:, 0] * b[:, 1] * a[:, 2] * d[:, 3] * e[:, 4] \
-            + b[:, 0] * a[:, 1] * d[:, 2] * c[:, 3] * e[:, 4] \
-            + a[:, 0] * d[:, 1] * c[:, 2] * b[:, 3] * e[:, 4]
-
-        for layer in self.fc:
-            x = layer(x)
-
+        x = apply_layers(x, self.features)
+        x = tf.reshape(x, (-1, self.n, self.n, self.num_features))
+        x = tf.transpose(x, (0, 1, 3, 2))  # for the compatibility with already trained models
+        x = sigmaPi(x, self.m, self.n, self.p)
+        x = apply_layers(x, self.fc)
         return x
 
 
 class Conv1d(tf.keras.Model):
-    def __init__(self, num_features):
+    def __init__(self):
         super(Conv1d, self).__init__()
         activation = tf.keras.activations.tanh
-        self.last_n = 118  # 128
-        self.conv = tf.keras.layers.Conv1D(32, 3, activation=activation)
-        self.e = tf.keras.layers.Dense(32, activation=activation)
+        self.last_n = 118
         self.features = [
-            tf.keras.layers.Dense(self.last_n),
+            tf.keras.layers.Conv1D(32, 3, activation=activation),
+            tf.keras.layers.Conv1D(self.last_n, 1, activation=activation),
         ]
-        # self.fc = tf.keras.layers.Dense(num_features, activation=activation)
         self.fc = [
             tf.keras.layers.Dense(32, activation=activation),
-            tf.keras.layers.Dense(num_features, activation=activation),
+            tf.keras.layers.Dense(32, activation=activation),
             tf.keras.layers.Dense(1),
         ]
 
-    def process(self, quad):
-        x = quad
+    def process(self, x):
         bs = x.shape[0]
-        # x = tf.reshape(quad, (-1, 8))
-        quad = x[:, :-1]
-        e = x[:, -1:]
-        x = tf.concat([quad[:, -1:], quad, quad[:, :1]], axis=1)[:, :, tf.newaxis]
-        x = self.conv(x)
-        e = self.e(e[:, :, tf.newaxis])
-        x = tf.concat([x, e], axis=1)
-        for layer in self.features:
-            x = layer(x)
+        x = tf.concat([x[:, -1:], x, x[:, :1]], axis=1)[:, :, tf.newaxis]
+        x = apply_layers(x, self.features)
         x = tf.reshape(x, (bs, -1))
-        # x = self.fc(x)
-        for layer in self.fc:
-            x = layer(x)
-
+        x = apply_layers(x, self.fc)
         return x
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         x = groupAvereaging(inputs, self.process)
-        # x = self.process(inputs)
         return x
-
-
-
-
-def partitionfunc(n, k, l=1):
-    '''n is the integer to partition, k is the length of partitions, l is the min partition element size'''
-    if k < 1:
-        raise StopIteration
-    if k == 1:
-        if n >= l:
-            yield (n,)
-        raise StopIteration
-    for i in range(l, n + 1):
-        for result in partitionfunc(n - i, k - 1, i):
-            yield (i,) + result
 
 
 class MulNet(tf.keras.Model):
@@ -222,37 +176,29 @@ class MulNet(tf.keras.Model):
         ]
 
     def call(self, x):
-        for l in self.fc:
-            x = l(x)
+        x = apply_layers(x, self.fc)
         return x
 
 
 class Maron(tf.keras.Model):
-    def __init__(self, num_features, activation=tf.keras.activations.tanh):
+    def __init__(self):
         super(Maron, self).__init__()
-
-        #self.w = tf.Variable(tf.random.normal([84]), dtype=tf.float32, trainable=True)
+        activation = tf.keras.activations.tanh
 
         self.features = [
-            tf.keras.layers.Dense(42, activation),
-            #tf.keras.layers.Dense(48, activation),
-            # tf.keras.layers.Dense(2048, activation),
-            #tf.keras.layers.Dense(6 * num_features, activation),
-            tf.keras.layers.Dense(num_features, activation),
-            # tf.keras.layers.Dense(1024, activation),
-            # tf.keras.layers.Dense(16, activation),
+            tf.keras.layers.Dense(48, activation),
+            tf.keras.layers.Dense(192, activation),
+            tf.keras.layers.Dense(32, activation),
             tf.keras.layers.Dense(1),
         ]
 
         self.mulnn = MulNet()
 
         # Z5 in S5
-        #self.a = list(set([p for x in partitionfunc(5, 5, l=0) for p in permutations(x)]))
-        # D8 in S5
-        self.a = list(set([p for x in partitionfunc(8, 5, l=0) for p in permutations(x)]))
+        self.a = list(set([p for x in partitionfunc(5, 5, l=0) for p in permutations(x)]))
         self.f = np.array(self.a)
 
-    def call(self, x, training=None):
+    def call(self, x):
         def inv(a, b, c, d, e):
             p = self.f
             x1 = a ** p[:, 0]
@@ -269,88 +215,17 @@ class Maron(tf.keras.Model):
 
         def term():
             # Z5 in S5
-            #p1, l1 = inv(a, b, c, d, e)
-            #p2, l2 = inv(e, a, b, c, d)
-            #p3, l3 = inv(d, e, a, b, c)
-            #p4, l4 = inv(c, d, e, a, b)
-            #p5, l5 = inv(b, c, d, e, a)
-            #q1 = p1 + p2 + p3 + p4 + p5
-            #L = (l1 + l2 + l3 + l4 + l5) / 5.
-
             p1, l1 = inv(a, b, c, d, e)
-            p2, l2 = inv(d, a, b, c, e)
-            p3, l3 = inv(c, d, a, b, e)
-            p4, l4 = inv(b, c, d, a, e)
-            p5, l5 = inv(d, c, b, a, e)
-            p6, l6 = inv(a, d, c, b, e)
-            p7, l7 = inv(b, a, d, c, e)
-            p8, l8 = inv(c, b, a, d, e)
-            q1 = p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8
-            L = (l1 + l2 + l3 + l4 + l5 + l6 + l7 + l8) / 5.
+            p2, l2 = inv(e, a, b, c, d)
+            p3, l3 = inv(d, e, a, b, c)
+            p4, l4 = inv(c, d, e, a, b)
+            p5, l5 = inv(b, c, d, e, a)
+            q1 = p1 + p2 + p3 + p4 + p5
+            L = (l1 + l2 + l3 + l4 + l5) / 5.
             return q1, L
 
         x, L = term()
 
-        #x = tf.cast(tf.stack(terms, axis=1), tf.float32)
-        for layer in self.features:
-            x = layer(x)
+        x = apply_layers(x, self.features)
 
         return x, L
-
-
-class MessagePassing(tf.keras.Model):
-    def __init__(self, num_features, activation=tf.keras.activations.tanh):
-        super(MessagePassing, self).__init__()
-        self.features = [
-            tf.keras.layers.Dense(16, activation),
-            tf.keras.layers.Dense(64, activation),
-            tf.keras.layers.Dense(32, tf.keras.activations.tanh),
-        ]
-        self.M = [
-            tf.keras.layers.Dense(64, activation),
-            tf.keras.layers.Dense(32, activation),
-        ]
-
-        self.U = [
-            tf.keras.layers.Dense(64, activation),
-            tf.keras.layers.Dense(32, activation),
-        ]
-
-        self.R = [
-            tf.keras.layers.Dense(32, activation),
-            tf.keras.layers.Dense(1),
-        ]
-
-    def process(self, input, layers):
-        for l in layers:
-            input = l(input)
-        return input
-
-    def call(self, inputs, training=None):
-        x = inputs[:, :, tf.newaxis]
-        for layer in self.features:
-            x = layer(x)
-        a, b, c, d, e = tf.unstack(x, axis=1)
-
-        Ua = a
-        Ub = b
-        Uc = c
-        Ud = d
-        Ue = e
-
-        for i in range(1):
-            Mab = self.process(tf.concat([Ua, Ub], axis=1), self.M)
-            Mbc = self.process(tf.concat([Ub, Uc], axis=1), self.M)
-            Mcd = self.process(tf.concat([Uc, Ud], axis=1), self.M)
-            Mde = self.process(tf.concat([Ud, Ue], axis=1), self.M)
-            Mea = self.process(tf.concat([Ue, Ua], axis=1), self.M)
-
-            Ua = self.process(tf.concat([Mea, Ua, a], axis=1), self.U)
-            Ub = self.process(tf.concat([Mab, Ub, b], axis=1), self.U)
-            Uc = self.process(tf.concat([Mbc, Uc, c], axis=1), self.U)
-            Ud = self.process(tf.concat([Mcd, Ud, d], axis=1), self.U)
-            Ue = self.process(tf.concat([Mde, Ue, e], axis=1), self.U)
-
-        x = self.process(tf.concat([Ua, Ub, Uc, Ud, Ue], axis=1), self.R)
-
-        return x

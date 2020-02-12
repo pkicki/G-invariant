@@ -13,7 +13,7 @@ parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
 # add parent (root) to pythonpath
-from models.poly_Z5 import GroupInvariance
+from models.poly import GroupInvariance
 from utils.permutation_groups import *
 from utils.polynomials import *
 
