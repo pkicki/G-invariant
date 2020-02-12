@@ -7,22 +7,18 @@ from time import time
 import numpy as np
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-from dataset.scenarios import area4_dataset
-from models.area4_nmid import GroupInvariance, GroupInvarianceConv
+from dataset.scenarios import quadrangle_area_dataset
+from models.area import GroupInvariance, GroupInvarianceConv
+from utils.permutation_groups import Z4
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
 # add parent (root) to pythonpath
-from dataset import scenarios
-from argparse import ArgumentParser
 
 import tensorflow as tf
-import tensorflow.contrib as tfc
 from tqdm import tqdm
-
-from dl_work.utils import LoadFromFile
 
 tf.enable_eager_execution()
 tf.set_random_seed(444)
@@ -41,9 +37,9 @@ def _ds(title, ds, ds_size, i, batch_size):
 
 
 names = ["my_inv_conv", "my_inv_fc"]
-#names = ["avg_conv", "avg_fc"]
+#names = ["my_inv_conv"]
 n = 32
-models = [GroupInvarianceConv(n), GroupInvariance(n)]
+perm = Z4
 
 
 def secondary():
@@ -54,12 +50,13 @@ def secondary():
         #for i in [1, 2]:
         for i in [1, 2, 4, 8, 16, 32, 64, 128]:
             if "conv" in name:
-                model = GroupInvarianceConv(i)
+                model = GroupInvarianceConv(perm, i)
             else:
-                model = GroupInvariance(i)
+                model = GroupInvariance(perm, i)
             fname = name + "_" + str(i)
             for ds_type in ["train", "val", "test"]:
-                ds, ds_size = area4_dataset(scenario_path.replace("train", ds_type))
+            #for ds_type in ["train"]:
+                ds, ds_size = quadrangle_area_dataset(scenario_path.replace("train", ds_type))
                 mae = []
                 times = []
                 for k in range(1, 10):
@@ -72,7 +69,7 @@ def secondary():
                     acc = []
                     for l, quad, area, in _ds('Train', dataset_epoch, ds_size, 0, batch_size):
                         start = time()
-                        pred = model(quad, training=True)
+                        pred = model(quad)
                         stop = time()
                         times.append(stop - start)
 

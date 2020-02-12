@@ -4,12 +4,14 @@ import sys
 import numpy as np
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+from utils.permutation_groups import Z5
+from utils.polynomials import poly_Z5
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-from models.poly_Z5 import GroupInvariance, SimpleNet, MessagePassing, Maron, Conv1d, GroupInvarianceConv
+from models.poly import *
 # add parent (root) to pythonpath
 from argparse import ArgumentParser
 
@@ -17,7 +19,7 @@ import tensorflow as tf
 import tensorflow.contrib as tfc
 from tqdm import tqdm
 
-from dl_work.utils import ExperimentHandler, LoadFromFile
+from utils.execution import ExperimentHandler, LoadFromFile
 
 tf.enable_eager_execution()
 # tf.set_random_seed(444)
@@ -36,15 +38,6 @@ def _ds(title, ds, ds_size, i, batch_size):
             pbar.update(batch_size)
 
 
-def poly_Z5(x):
-    def inv1(a, b):
-        return a * b ** 2
-
-    a, b, c, d, e = tf.unstack(x, axis=1)
-    q1 = inv1(a, b) + inv1(b, c) + inv1(c, d) + inv1(d, e) + inv1(e, a)
-    return q1
-
-
 def main(args):
     # 1. Get datasets
     ts = int(1e0)
@@ -57,24 +50,22 @@ def main(args):
     val_ds = np.random.rand(vs, args.batch_size, d)
 
     # 2. Define model
-    n = 32
-    #model = GroupInvariance(n)
-    #model = GroupInvarianceConv(n)
-    #model = SimpleNet(n)
-    #model = Conv1d(n)
-    model = MessagePassing(n)
-    #model = Maron(n)
+    model = None
+    if args.model == "FC_G-inv":
+        model = GroupInvariance(Z5, 64)
+    elif args.model == "Conv1D_G-inv":
+        model = GroupInvarianceConv(Z5, 116)
+    elif args.model == "FC_G-avg":
+        model = SimpleNet()
+    elif args.model == "Conv1D_G-avg":
+        model = Conv1d()
+    elif args.model == "Maron":
+        model = Maron()
+    else:
+        print("NO MODEL NAME PROVIDED!!!")
 
     # 3. Optimization
-
-    eta = tfc.eager.Variable(args.eta)
-    eta_f = tf.train.exponential_decay(
-        args.eta,
-        tf.train.get_or_create_global_step(),
-        int(float(train_size) / args.batch_size),
-        args.train_beta)
-    eta.assign(eta_f())
-    optimizer = tf.train.AdamOptimizer(eta)
+    optimizer = tf.train.AdamOptimizer(args.eta)
     l2_reg = tf.keras.regularizers.l2(1e-5)
 
     # 4. Restore, Log & Save
@@ -90,8 +81,7 @@ def main(args):
         for i in tqdm(range(ts), "Train"):
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
-                #pred, L = model(train_ds[i], training=True)
-                pred = model(train_ds[i], training=True)
+                pred = model(train_ds[i])
                 L = 0.
                 if len(pred) == 2:
                     pred, L = pred
@@ -109,7 +99,6 @@ def main(args):
 
                 y = poly_Z5(train_ds[i])
                 model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
-
                 reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
                 total_loss = model_loss + L
 
@@ -124,16 +113,9 @@ def main(args):
             # 5.1.4 Save logs for particular interval
             with tfc.summary.record_summaries_every_n_global_steps(args.log_interval, train_step):
                 tfc.summary.scalar('metrics/model_loss', model_loss, step=train_step)
-                tfc.summary.scalar('metrics/reg_loss', reg_loss, step=train_step)
-                tfc.summary.scalar('training/eta', eta, step=train_step)
 
             # 5.1.5 Update meta variables
-            eta.assign(eta_f())
             train_step += 1
-            # if train_step % 20 == 0:
-            #    _plot(x_path, y_path, th_path, env, train_step)
-            # _plot(x_path, y_path, th_path, data, train_step)
-        # epoch_accuracy = tf.reduce_mean(tf.concat(acc, -1))
 
         # 5.1.6 Take statistics over epoch
         with tfc.summary.always_record_summaries():
@@ -145,13 +127,11 @@ def main(args):
         #    accuracy.result()
 
         # 5.2. Validation Loop
-        accuracy = tfc.eager.metrics.Accuracy('metrics/accuracy')
         experiment_handler.log_validation()
         acc = []
         for i in tqdm(range(vs), "Val"):
             # 5.2.1 Make inference of the model for validation and calculate losses
-            #pred, L = model(val_ds[i], training=False)
-            pred = model(val_ds[i], training=False)
+            pred = model(val_ds[i])
             if len(pred) == 2:
                 pred, L = pred
 
@@ -175,18 +155,11 @@ def main(args):
         with open(args.working_path + "/" + args.out_name + "/" + model.name + ".csv", 'a') as fh:
             fh.write("VAL, %d, %.6f\n" % (epoch, epoch_accuracy))
 
-        # print(epoch_accuracy)
-        # break
 
         # 5.3 Save last and best
-        # if epoch_accuracy < best_accuracy:
-        #    experiment_handler.save_best()
-        #    best_accuracy = epoch_accuracy
-        # experiment_handler.save_last()
         if epoch_accuracy < best_accuracy:
             model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/best-" + str(epoch))
             best_accuracy = epoch_accuracy
-        # model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/last_n-" + str(epoch))
 
         experiment_handler.flush()
 
@@ -195,11 +168,11 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--config-file', action=LoadFromFile, type=open)
     parser.add_argument('--working-path', type=str, default='./working_dir')
+    parser.add_argument('--model', type=str)
     parser.add_argument('--num-epochs', type=int)
     parser.add_argument('--batch-size', type=int)
     parser.add_argument('--log-interval', type=int, default=5)
     parser.add_argument('--out-name', type=str)
     parser.add_argument('--eta', type=float, default=5e-4)
-    parser.add_argument('--train-beta', type=float, default=0.99)
     args, _ = parser.parse_known_args()
     main(args)

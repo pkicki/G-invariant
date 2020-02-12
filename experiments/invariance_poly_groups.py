@@ -3,16 +3,16 @@ import os
 import sys
 import numpy as np
 
-from utils.permutation_groups import Z4
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 
-from models.area import *
-
+from utils.polynomials import *
+from utils.permutation_groups import *
+from models.poly import GroupInvariance
 # add parent (root) to pythonpath
-from dataset import scenarios
 from argparse import ArgumentParser
 
 import tensorflow as tf
@@ -23,6 +23,7 @@ from utils.execution import ExperimentHandler, LoadFromFile
 
 tf.enable_eager_execution()
 # tf.set_random_seed(444)
+np.random.seed(444)
 
 _tqdm = lambda t, s, i: tqdm(
     ncols=80,
@@ -39,29 +40,48 @@ def _ds(title, ds, ds_size, i, batch_size):
 
 def main(args):
     # 1. Get datasets
-    train_ds, train_size = scenarios.quadrangle_area_dataset(args.scenario_path)
-    val_ds, val_size = scenarios.quadrangle_area_dataset(args.scenario_path.replace("train", "val"))
+    #ts = int(1e0)
+    ts = int(args.ts)
+    vs = int(3e1)
 
-    val_bs = args.batch_size
-    val_ds = val_ds \
-        .batch(val_bs) \
-        .prefetch(val_bs)
+    d = 5
+    train_ds = np.random.rand(ts, args.batch_size, d)
+    val_ds = np.random.rand(vs, args.batch_size, d)
+
+    perm = None
+    if args.group == "Z5":
+        perm = Z5
+    elif args.group == "D8":
+        perm = D8
+    elif args.group == "A4":
+        perm = A4
+    elif args.group == "S4":
+        perm = S4
+    elif args.group == "S3":
+        perm = S3
+    else:
+        print("UNDEFINED GROUP")
+
+    poly = None
+    if args.poly == "Z5":
+        poly = poly_Z5
+    elif args.poly == "D8":
+        poly = poly_D8
+    elif args.poly == "A4":
+        poly = poly_A4
+    elif args.poly == "S4":
+        poly = poly_S4
+    elif args.poly == "S3":
+        poly = poly_S3
+    elif args.poly == "Z3":
+        poly = poly_Z3
+    elif args.poly == "S3xS2":
+        poly = poly_S3xS2
+    else:
+        print("UNDEFINED GROUP")
 
     # 2. Define model
-
-    model = None
-    if args.model == "FC_G-inv":
-        model = GroupInvariance(Z4, args.n)
-    elif args.model == "Conv1D_G-inv":
-        model = GroupInvarianceConv(Z4, args.n)
-    elif args.model == "FC_G-avg":
-        model = SimpleNet()
-    elif args.model == "Conv1D_G-avg":
-        model = Conv1d()
-    elif args.model == "Maron":
-        model = Maron()
-    else:
-        print("NO MODEL NAME PROVIDED!!!")
+    model = GroupInvariance(perm, args.n)
 
     # 3. Optimization
     optimizer = tf.train.AdamOptimizer(args.eta)
@@ -74,34 +94,33 @@ def main(args):
     train_step, val_step = 0, 0
     best_accuracy = 1e10
     for epoch in range(args.num_epochs):
-        # workaround for tf problems with shuffling
-        dataset_epoch = train_ds.shuffle(train_size)
-        dataset_epoch = dataset_epoch.batch(args.batch_size).prefetch(args.batch_size)
-
         # 5.1. Training Loop
         experiment_handler.log_training()
         acc = []
-        for i, quad, area, in _ds('Train', dataset_epoch, train_size, epoch, args.batch_size):
+        per = []
+        for i in tqdm(range(ts), "Train"):
             # 5.1.1. Make inference of the model, calculate losses and record gradients
             with tf.GradientTape(persistent=True) as tape:
-                L = 0.0
-                pred = model(quad)
+                pred = model(train_ds[i])
+                L = 0.
                 if len(pred) == 2:
                     pred, L = pred
 
-                ## uncomment to check model size
-                # nw = 0
-                # for layer in model.layers:
-                #    for l in layer.get_weights():
-                #        a = 1
-                #        for s in l.shape:
-                #            a *= s
-                #        nw += a
-                # print(nw)
+                ## check model size
+                if False:
+                    nw = 0
+                    for layer in model.layers:
+                        for l in layer.get_weights():
+                            a = 1
+                            for s in l.shape:
+                                a *= s
+                            nw += a
+                    print(nw)
 
-                model_loss = tf.keras.losses.mean_absolute_error(area[:, tf.newaxis], pred)
+                y = poly(train_ds[i])
+                model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
+                percent = model_loss / y
                 reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
-
                 total_loss = model_loss + L
 
             # 5.1.2 Take gradients (if necessary apply regularization like clipping),
@@ -111,6 +130,7 @@ def main(args):
                                       global_step=tf.train.get_or_create_global_step())
 
             acc = acc + list(model_loss.numpy())
+            per = per + list(percent.numpy())
 
             # 5.1.4 Save logs for particular interval
             with tfc.summary.record_summaries_every_n_global_steps(args.log_interval, train_step):
@@ -125,26 +145,32 @@ def main(args):
 
         with open(args.working_path + "/" + args.out_name + "/" + model.name + ".csv", 'a') as fh:
             fh.write("TRAIN, %d, %.6f\n" % (epoch, np.mean(acc)))
+            fh.write("TRAIN, %d, %.6f\n" % (epoch, np.mean(per)))
+
+        #    accuracy.result()
 
         # 5.2. Validation Loop
-        accuracy = tfc.eager.metrics.Accuracy('metrics/accuracy')
         experiment_handler.log_validation()
         acc = []
-        for i, quad, area in _ds('Validation', val_ds, val_size, epoch, val_bs):
+        per = []
+        for i in tqdm(range(vs), "Val"):
             # 5.2.1 Make inference of the model for validation and calculate losses
-            L = 0.0
-            pred = model(quad)
+            pred = model(val_ds[i])
             if len(pred) == 2:
                 pred, L = pred
 
-            model_loss = tf.keras.losses.mean_absolute_error(area[:, tf.newaxis], pred)
+            y = poly(val_ds[i])
+            model_loss = tf.keras.losses.mean_absolute_error(y[:, tf.newaxis], pred)
+            percent = model_loss / y
 
             acc = acc + list(model_loss.numpy())
+            per = per + list(percent.numpy())
 
             # 5.2.3 Print logs for particular interval
             with tfc.summary.record_summaries_every_n_global_steps(args.log_interval, val_step):
                 tfc.summary.scalar('metrics/model_loss', model_loss, step=val_step)
 
+            # 5.2.4 Update meta variables
             val_step += 1
 
         epoch_accuracy = np.mean(acc)
@@ -154,12 +180,12 @@ def main(args):
 
         with open(args.working_path + "/" + args.out_name + "/" + model.name + ".csv", 'a') as fh:
             fh.write("VAL, %d, %.6f\n" % (epoch, epoch_accuracy))
+            fh.write("VAL, %d, %.6f\n" % (epoch, np.mean(per)))
 
         # 5.3 Save last and best
         if epoch_accuracy < best_accuracy:
             model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/best-" + str(epoch))
             best_accuracy = epoch_accuracy
-        model.save_weights(args.working_path + "/" + args.out_name + "/checkpoints/last_n-" + str(epoch))
 
         experiment_handler.flush()
 
@@ -167,14 +193,15 @@ def main(args):
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--config-file', action=LoadFromFile, type=open)
-    parser.add_argument('--model', type=str)
-    parser.add_argument('--scenario-path', type=str)
     parser.add_argument('--working-path', type=str, default='./working_dir')
+    parser.add_argument('--poly', type=str)
+    parser.add_argument('--group', type=str)
+    parser.add_argument('--n', type=int)
+    parser.add_argument('--ts', type=int, default=1)
     parser.add_argument('--num-epochs', type=int)
     parser.add_argument('--batch-size', type=int)
     parser.add_argument('--log-interval', type=int, default=5)
     parser.add_argument('--out-name', type=str)
     parser.add_argument('--eta', type=float, default=5e-4)
-    parser.add_argument('--n', type=int, default=2)
     args, _ = parser.parse_known_args()
     main(args)
