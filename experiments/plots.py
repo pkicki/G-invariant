@@ -12,7 +12,7 @@ def tsplot(data, label):
 
     line, = plt.plot(m)
     line.set_label(label)
-    plt.fill_between(np.arange(len(m)), m + s, m - s, alpha=0.5)
+    #plt.fill_between(np.arange(len(m)), m + s, m - s, alpha=0.5)
 
 
 start = 0

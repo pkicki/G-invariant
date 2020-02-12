@@ -197,7 +197,7 @@ if __name__ == '__main__':
     parser.add_argument('--poly', type=str)
     parser.add_argument('--group', type=str)
     parser.add_argument('--n', type=int)
-    parser.add_argument('--ts', type=int)
+    parser.add_argument('--ts', type=int, default=1)
     parser.add_argument('--num-epochs', type=int)
     parser.add_argument('--batch-size', type=int)
     parser.add_argument('--log-interval', type=int, default=5)

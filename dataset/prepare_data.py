@@ -7,8 +7,6 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from utils.geometry import if_inside, if_collide
-
 
 def area(path, roll, id=0):
     def area(xy):
