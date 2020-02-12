@@ -80,7 +80,7 @@ def main(args):
         print("UNDEFINED GROUP")
 
     # 2. Define model
-    model = GroupInvariance(perm, 2)
+    model = GroupInvariance(perm, args.n)
 
     # 3. Optimization
     optimizer = tf.train.AdamOptimizer(args.eta)
@@ -185,6 +185,7 @@ if __name__ == '__main__':
     parser.add_argument('--working-path', type=str, default='./working_dir')
     parser.add_argument('--poly', type=str)
     parser.add_argument('--group', type=str)
+    parser.add_argument('--n', type=int)
     parser.add_argument('--num-epochs', type=int)
     parser.add_argument('--batch-size', type=int)
     parser.add_argument('--log-interval', type=int, default=5)
