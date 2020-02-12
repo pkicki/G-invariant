@@ -20,3 +20,11 @@ This latent representation is then processed with a multi-layer perceptron in th
 * [utils/](utils/README.md) - contains a bunch of utilities, such as: polynomials definitions, predefined permutation groups, etc.
 
 
+### Dependencies
+* Tensorflow 1.14
+* Keras 2.2.5
+* NumPy 1.16.4
+* cudatoolkit 10.1.168
+* Matplotlib 3.1.1
+
+
