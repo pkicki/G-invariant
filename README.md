@@ -14,11 +14,11 @@ This latent representation is then processed with a multi-layer perceptron in th
 ### Repository structure
 
 #### Main structure
-* [dataset/](dataset/README.md) - contains files associated with preparation and loading the dataset of convex quadrangles
-* [experiments/](experiments/README.md) - contains the code to perform neural networks training and evaluation of the models
-* [models/](models/README.md) - contains model of the proposed G-invariant neural network and other models used for the comparison
-* [utils/](utils/README.md) - contains a bunch of utilities, such as: polynomials definitions, predefined permutation groups, etc.
-* [data_inv/](data_inv/README.md) - contains a dataset used in the experiments (convex quadrangle estimation only)
+* [dataset/](dataset/) - contains files associated with preparation and loading the dataset of convex quadrangles
+* [experiments/](experiments/) - contains the code to perform neural networks training and evaluation of the models
+* [models/](models/) - contains model of the proposed G-invariant neural network and other models used for the comparison
+* [utils/](utils/) - contains a bunch of utilities, such as: polynomials definitions, predefined permutation groups, etc.
+* [data_inv/](data_inv/) - contains a dataset used in the experiments (convex quadrangle estimation only)
 
 
 ### Dependencies
