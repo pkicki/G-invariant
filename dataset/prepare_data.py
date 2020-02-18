@@ -36,7 +36,7 @@ def area(path, roll, id=0):
         yc = (1. - d * 2) * random() + d
         # base = np.array([0., pi/2, pi, 3*pi/2])
         # n = 3
-        n = 10
+        n = 4
         b = 2 / n * pi
         base = np.arange(n) * b
         if roll:

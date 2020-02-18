@@ -18,6 +18,7 @@ This latent representation is then processed with a multi-layer perceptron in th
 * [experiments/](experiments/README.md) - contains the code to perform neural networks training and evaluation of the models
 * [models/](models/README.md) - contains model of the proposed G-invariant neural network and other models used for the comparison
 * [utils/](utils/README.md) - contains a bunch of utilities, such as: polynomials definitions, predefined permutation groups, etc.
+* [data_inv/](data_inv/README.md) - contains a dataset used in the experiments (convex quadrangle estimation only)
 
 
 ### Dependencies
