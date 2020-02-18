@@ -1,5 +1,5 @@
 ##### Contents 
-* [config_files/](experiments/config_files/README.md) - contains the configuration files used in order to train the model, for further details pleas see its [README]
+* [config_files/](experiments/config_files/) - contains the configuration files used in order to train the model, for further details pleas see its [README]
 * `invariance_area.py` - training script for the experiments from the sections 4.4 and 4.6
 * `invariance_area_nmid_test.py` - testing script for the experiment from the section 4.6
 * `invariance_area_test.py` - testing script for the experiment from the section 4.4
