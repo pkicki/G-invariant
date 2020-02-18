@@ -1,7 +1,6 @@
 # A Computationally Efficient Neural Network Invariant to the Action of Symmetry Subgroups
 
-This repository contains the code associated with the paper "A Computationally Efficient Neural Network Invariant to the Action of Symmetry Subgroups",
-submitted to ICML'20.
+This repository contains the code associated with the paper "A Computationally Efficient Neural Network Invariant to the Action of Symmetry Subgroups".
 
 ### Short description
 This repository contains implementation of the G-invariant neural networks.
