@@ -8,7 +8,10 @@ def sigmaPi(fin, m, n, p):
     fin = tf.tile(fin, (1, 1, m, 1, 1))
     y = fin @ p
     y = tf.linalg.diag_part(y)
-    y = tf.reduce_prod(y, axis=3)
+    #y = tf.reduce_prod(y, axis=3) ** (1 / n)
+    #y = tf.reduce_prod(y, axis=3)
+    #y = tf.linalg.norm(y, axis=3)
+    y = tf.keras.activations.tanh(tf.reduce_sum(y, axis=3))
     y = tf.reduce_sum(y, axis=2)
     return y
 

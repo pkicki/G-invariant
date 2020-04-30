@@ -13,3 +13,4 @@ S4 = [list(x) + [4] for x in perm]
 perm = list(permutations(range(3)))
 S3 = [list(x) + [3, 4] for x in perm]
 
+Human = [list(range(16)), [5, 4, 3, 2, 1, 0, 6, 7, 8, 9, 15, 14, 13, 12, 11, 10]]
