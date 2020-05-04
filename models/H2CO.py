@@ -27,8 +27,9 @@ class GroupInvariance(tf.keras.Model):
             #tf.keras.layers.Dense(64, tanh_p1),
             tf.keras.layers.Dense(32, activation),
             #tf.keras.layers.Dense(self.n * self.num_features, None),
-            #tf.keras.layers.Dense(self.n * self.num_features, tanh_p1),
-            tf.keras.layers.Dense(self.n * 64, tanh_p1),
+            #tf.keras.layers.Dense(self.n * self.num_features, activation),
+            tf.keras.layers.Dense(self.n * self.num_features, tanh_p1),
+            #tf.keras.layers.Dense(self.n * 64, tanh_p1),
             #tf.keras.layers.Dense(self.n * self.num_features, tanh_p1, trainable=False),
         ]
 

@@ -53,8 +53,8 @@ def main(args):
 
     perm = H2CO_perm
     ##model = GroupInvariance(perm, 256)
-    #model = GroupInvariance(perm)
-    model = FCGroupAvg()
+    model = GroupInvariance(perm)
+    #model = FCGroupAvg()
     #model = FC()
     #model = Pooling()
     #model = Maron()

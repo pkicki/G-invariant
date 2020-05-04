@@ -9,6 +9,7 @@ def sigmaPi(fin, m, n, p):
     y = fin @ p
     y = tf.linalg.diag_part(y)
     y = tf.reduce_prod(y, axis=3)
+    #y = tf.keras.activations.tanh(tf.reduce_sum(y, axis=3))
     y = tf.reduce_sum(y, axis=2)
     return y
 
