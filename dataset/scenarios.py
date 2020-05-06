@@ -39,6 +39,8 @@ def action_recognition_dataset(path):
     cat = {cls: idx for idx, cls in enumerate(sorted(list(set(list(y)))))}
     n_cls = len(cat)
     y = np.array([cat[k] for k in list(y)])
+    u, cnts = np.unique(y, return_counts=True)
+    a = dict(zip(u, cnts))
     split = np.load(path + "split.npy")
     s1 = int(0.7 * len(x))
     s2 = int(0.9 * len(x))

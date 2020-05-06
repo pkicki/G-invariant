@@ -61,7 +61,7 @@ def main(args):
 
     # 3. Optimization
     optimizer = tf.train.AdamOptimizer(args.eta)
-    l2_reg = tf.keras.regularizers.l2(1e-5)
+    l2_reg = tf.keras.regularizers.l2(1e-4)
 
     # 4. Restore, Log & Save
     experiment_handler = ExperimentHandler(args.working_path, args.out_name, args.log_interval, model, optimizer)
@@ -99,7 +99,7 @@ def main(args):
                 model_loss = tf.keras.losses.categorical_crossentropy(oh, pred)
                 reg_loss = tfc.layers.apply_regularization(l2_reg, model.trainable_variables)
 
-                total_loss = model_loss + L
+                total_loss = model_loss + L + reg_loss
 
             # 5.1.2 Take gradients (if necessary apply regularization like clipping),
             grads = tape.gradient(total_loss, model.trainable_variables)

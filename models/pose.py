@@ -9,6 +9,43 @@ from utils.other import partitionfunc, groupAvereaging, apply_layers
 tf.enable_eager_execution()
 
 
+#class GroupInvariance(tf.keras.Model):
+#    def __init__(self, perm, num_features, n_cls):
+#        super(GroupInvariance, self).__init__()
+#        activation = tf.keras.activations.tanh
+#        tanhp1 = lambda x: tf.keras.activations.tanh(x) + 1.
+#        tanhp2 = lambda x: tf.keras.activations.tanh(x) + 2.
+#
+#        self.num_features = num_features
+#        self.n = len(perm[0])
+#        self.m = len(perm)
+#        self.p = prepare_permutation_matices(perm, self.n, self.m)
+#
+#        self.features = [
+#            #tf.keras.layers.Dense(16, activation),
+#            tf.keras.layers.Dense(64, activation),
+#            tf.keras.layers.Dense(self.n * self.num_features, tf.keras.activations.tanh),
+#            #tf.keras.layers.Dense(self.n * self.num_features, tf.keras.activations.relu),
+#            #tf.keras.layers.Dense(self.n * self.num_features, tanhp1),
+#            #tf.keras.layers.Dense(self.n * self.num_features, tanhp2),
+#            #tf.keras.layers.Dense(self.n * self.num_features, tf.exp),
+#            #tf.keras.layers.Dense(self.n * self.num_features, None),
+#        ]
+#
+#        self.fc = [
+#            tf.keras.layers.Dense(32, activation),
+#            tf.keras.layers.Dense(n_cls, tf.nn.softmax),
+#        ]
+#
+#        #self.bn = tf.keras.layers.BatchNormalization()
+#
+#    def call(self, x, training=True):
+#        x = apply_layers(x, self.features)
+#        x = tf.reshape(x, (-1, self.n, self.num_features, self.n))
+#        x = sigmaPi(x, self.m, self.n, self.p)
+#        x = apply_layers(x, self.fc)
+#        return x
+
 class GroupInvariance(tf.keras.Model):
     def __init__(self, perm, num_features, n_cls):
         super(GroupInvariance, self).__init__()
@@ -16,26 +53,26 @@ class GroupInvariance(tf.keras.Model):
         tanhp1 = lambda x: tf.keras.activations.tanh(x) + 1.
         tanhp2 = lambda x: tf.keras.activations.tanh(x) + 2.
 
-        self.num_features = num_features
+        self.num_features = n_cls
         self.n = len(perm[0])
         self.m = len(perm)
         self.p = prepare_permutation_matices(perm, self.n, self.m)
 
         self.features = [
-            tf.keras.layers.Dense(16, activation),
-            tf.keras.layers.Dense(64, activation),
-            #tf.keras.layers.Dense(self.n * self.num_features, tf.keras.activations.tanh),
+            #tf.keras.layers.Dense(16, activation),
+            tf.keras.layers.Dense(55, activation),
+            tf.keras.layers.Dense(self.n * self.num_features, tf.keras.activations.tanh),
             #tf.keras.layers.Dense(self.n * self.num_features, tf.keras.activations.relu),
             #tf.keras.layers.Dense(self.n * self.num_features, tanhp1),
             #tf.keras.layers.Dense(self.n * self.num_features, tanhp2),
             #tf.keras.layers.Dense(self.n * self.num_features, tf.exp),
-            tf.keras.layers.Dense(self.n * self.num_features, None),
+            #tf.keras.layers.Dense(self.n * self.num_features, None),
         ]
 
-        self.fc = [
-            tf.keras.layers.Dense(32, activation),
-            tf.keras.layers.Dense(n_cls, tf.nn.softmax),
-        ]
+        #self.fc = [
+        #    tf.keras.layers.Dense(32, activation),
+        #    tf.keras.layers.Dense(n_cls, tf.nn.softmax),
+        #]
 
         #self.bn = tf.keras.layers.BatchNormalization()
 
@@ -43,17 +80,44 @@ class GroupInvariance(tf.keras.Model):
         x = apply_layers(x, self.features)
         x = tf.reshape(x, (-1, self.n, self.num_features, self.n))
         x = sigmaPi(x, self.m, self.n, self.p)
-        x = apply_layers(x, self.fc)
+        x = tf.nn.softmax(x)
+        #x = apply_layers(x, self.fc)
         return x
+
+#class FCGAvg(tf.keras.Model):
+#    def __init__(self, n_cls):
+#        super(FCGAvg, self).__init__()
+#        self.features = [
+#            #tf.keras.layers.Dense(16, tf.keras.activations.tanh),
+#            tf.keras.layers.Dense(64, tf.keras.activations.tanh),
+#            tf.keras.layers.Dense(157, tf.keras.activations.tanh),
+#            tf.keras.layers.Dense(32, tf.keras.activations.tanh),
+#            tf.keras.layers.Dense(n_cls, tf.nn.softmax),
+#        ]
+#
+#    def call(self, inputs):
+#        x1 = inputs
+#        a = [x1[:, i] for i in [5, 4, 3, 2, 1, 0, 6, 7, 8, 9, 15, 14, 13, 12, 11, 10]]
+#        x2 = np.stack(a, 1)
+#        x = np.stack([x1, x2], -2)
+#        x = tf.reshape(x, (-1, 2, 32))
+#        x = apply_layers(x, self.features)
+#        x = tf.reduce_mean(x, axis=1)
+#        return x
 
 
 class FCGAvg(tf.keras.Model):
     def __init__(self, n_cls):
         super(FCGAvg, self).__init__()
         self.features = [
-            tf.keras.layers.Dense(16, tf.keras.activations.tanh),
+            #tf.keras.layers.Dense(16, tf.keras.activations.tanh),
             tf.keras.layers.Dense(64, tf.keras.activations.tanh),
-            tf.keras.layers.Dense(350, tf.keras.activations.tanh),
+            tf.keras.layers.Dense(146, tf.keras.activations.tanh),
+            tf.keras.layers.Dense(32, tf.keras.activations.tanh),
+            tf.keras.layers.Dense(16, tf.keras.activations.tanh),
+        ]
+
+        self.fc = [
             tf.keras.layers.Dense(32, tf.keras.activations.tanh),
             tf.keras.layers.Dense(n_cls, tf.nn.softmax),
         ]
@@ -66,8 +130,8 @@ class FCGAvg(tf.keras.Model):
         x = tf.reshape(x, (-1, 2, 32))
         x = apply_layers(x, self.features)
         x = tf.reduce_mean(x, axis=1)
+        x = apply_layers(x, self.fc)
         return x
-
 
 class FC(tf.keras.Model):
     def __init__(self, n_cls):
@@ -75,7 +139,7 @@ class FC(tf.keras.Model):
         self.features = [
             tf.keras.layers.Dense(16, tf.keras.activations.tanh),
             tf.keras.layers.Dense(64, tf.keras.activations.tanh),
-            tf.keras.layers.Dense(1440, tf.keras.activations.tanh),
+            tf.keras.layers.Dense(350, tf.keras.activations.tanh),
             tf.keras.layers.Dense(32, tf.keras.activations.tanh),
             tf.keras.layers.Dense(n_cls, tf.nn.softmax),
         ]
