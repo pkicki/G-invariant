@@ -60,6 +60,10 @@ def action_recognition_dataset(path):
     y_train = y[idx_train]
     y_val = y[idx_val]
     y_test = y[idx_test]
+    u, cnts = np.unique(y_train, return_counts=True)
+    a_train = dict(zip(u, cnts))
+    u, cnts = np.unique(y_val, return_counts=True)
+    a_val = dict(zip(u, cnts))
 
     train_ds = tf.data.Dataset.from_tensor_slices((x_train, y_train)) \
         .shuffle(buffer_size=len(x_train), reshuffle_each_iteration=True)
