@@ -8,10 +8,13 @@ def sigmaPi(fin, m, n, p):
     fin = tf.tile(fin, (1, 1, m, 1, 1))
     y = fin @ p
     y = tf.linalg.diag_part(y)
-    #y = tf.reduce_prod(y, axis=3) ** (1 / n)
-    #y = tf.reduce_prod(y, axis=3)
-    #y = tf.linalg.norm(y, axis=3)
-    y = tf.keras.activations.tanh(tf.reduce_sum(y, axis=3))
+
+    # TO METE:
+    # here you can switch to other merging procedures in SigmaPi
+    #y = tf.reduce_prod(y, axis=3) ** (1 / n) # different idea
+    #y = tf.reduce_prod(y, axis=3) # as in the ICML paper
+    y = tf.keras.activations.tanh(tf.reduce_sum(y, axis=3)) # works best on MPII Human Poses
+
     y = tf.reduce_sum(y, axis=2)
     return y
 
