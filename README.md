@@ -1,6 +1,6 @@
 # A New Neural Network Architecture Invariant to the Action of Symmetry Subgroups
 
-This repository contains the code associated with the paper "A New Neural Network Architecture Invariant to the Action of Symmetry Subgroups" accepted as contributed talk (extended oral presentation) at Differential Geometry meets Deep Learning Workshop at NeurIPS 2020.
+This repository contains the code associated with the paper **"A New Neural Network Architecture Invariant to the Action of Symmetry Subgroups"** accepted as contributed talk (extended oral presentation) at [Differential Geometry meets Deep Learning Workshop at NeurIPS 2020](https://sites.google.com/view/diffgeo4dl/).
 
 ### Short description
 This repository contains implementation of the G-invariant neural networks.
