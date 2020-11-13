@@ -1,6 +1,6 @@
-# A Computationally Efficient Neural Network Invariant to the Action of Symmetry Subgroups
+# A New Neural Network Architecture Invariant to the Action of Symmetry Subgroups
 
-This repository contains the code associated with the paper ["A Computationally Efficient Neural Network Invariant to the Action of Symmetry Subgroups"](https://arxiv.org/abs/2002.07528).
+This repository contains the code associated with the paper "A New Neural Network Architecture Invariant to the Action of Symmetry Subgroups" accepted as contributed talk (extended oral presentation) at Differential Geometry meets Deep Learning Workshop at NeurIPS 2020.
 
 ### Short description
 This repository contains implementation of the G-invariant neural networks.
@@ -30,14 +30,7 @@ This latent representation is then processed with a multi-layer perceptron in th
 
 ### Citation
 ```
-@misc{kicki2020invariant,
-    title={A Computationally Efficient Neural Network Invariant to the Action of Symmetry Subgroups},
-    author={Piotr Kicki and Mete Ozay and Piotr Skrzypczyński},
-    year={2020},
-    eprint={2002.07528},
-    archivePrefix={arXiv},
-    primaryClass={cs.LG}
-}
+...
 ```
 
 
